@@ -91,7 +91,7 @@ protected:
 JpgRotate::JpgRotate(int argc, char *argv[]):
   Application(argc, argv, "JpgRotate")
 { 
-  //Application::showHelpIfNoArguments(); 
+  Application::showHelpIfNoArguments(); 
   //Application::addCmdOption("option,o", "example of cmd option");
   //Application::addCmdOptionFlag("flag,f", "example of cmd flag");
   
