@@ -46,7 +46,7 @@ data:
 	@cp -r src/data $(DESTBIN)/
 
 strip:
-	$(STRIP) $(DESTBIN)/*
+	$(STRIP) $(DESTBIN)/GdalMess
 
 OBJS := $(OBJ)/GdalMess.o $(OBJ)/Application.o
 

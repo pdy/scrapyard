@@ -1,9 +1,13 @@
 #include "application/Application.h"
 #include "application/TrivialLogger.h"
 
+#include <iostream>
+
 #include <gdal/gdal.h>
 #include <gdal/gdal_priv.h>
 #include <gdal/cpl_conv.h>
+
+#include <gdal/gdalwarper.h>
 
 class GdalMess : public Application
 {
@@ -14,31 +18,129 @@ protected:
   int main() override;
 };
 
+/*
+void datasetInfo(GDALDataset *dataset)
+{
+  double        adfGeoTransform[6];
+  printf( "Driver: %s/%s\n",
+        dataset->GetDriver()->GetDescription(),
+        dataset->GetDriver()->GetMetadataItem( GDAL_DMD_LONGNAME ) );
+  printf( "Size is %dx%dx%d\n",
+        dataset->GetRasterXSize(), dataset->GetRasterYSize(),
+        dataset->GetRasterCount() );
+  if( dataset->GetProjectionRef()  != NULL )
+    printf( "Projection is `%s'\n", dataset->GetProjectionRef() );
+  if( dataset->GetGeoTransform( adfGeoTransform ) == CE_None )
+  {
+    printf( "Origin = (%.6f,%.6f)\n",
+            adfGeoTransform[0], adfGeoTransform[3] );
+    printf( "Pixel Size = (%.6f,%.6f)\n",
+            adfGeoTransform[1], adfGeoTransform[5] );
+  }
+
+}
+*/
+/*
+void fetchBand(GDALDataset *dataset)
+{
+  GDALRasterBand *band;
+int             nBlockXSize, nBlockYSize;
+int             bGotMin, bGotMax;
+double          adfMinMax[2];
+band = dataset->GetRasterBand( 1 );
+band->GetBlockSize( &nBlockXSize, &nBlockYSize );
+printf( "Block=%dx%d Type=%s, ColorInterp=%s\n",
+        nBlockXSize, nBlockYSize,
+        GDALGetDataTypeName(band->GetRasterDataType()),
+        GDALGetColorInterpretationName(
+            band->GetColorInterpretation()) );
+adfMinMax[0] = band->GetMinimum( &bGotMin );
+adfMinMax[1] = band->GetMaximum( &bGotMax );
+if( ! (bGotMin && bGotMax) )
+    GDALComputeRasterMinMax((GDALRasterBandH)band, TRUE, adfMinMax);
+printf( "Min=%.3fd, Max=%.3f\n", adfMinMax[0], adfMinMax[1] );
+if( band->GetOverviewCount() > 0 )
+    printf( "Band has %d overviews.\n", band->GetOverviewCount() );
+if( band->GetColorTable() != NULL )
+    printf( "Band has a color table with %d entries.\n",
+            band->GetColorTable()->GetColorEntryCount() );
+  
+}
+*/
+
+
+GDALDataset* getDataSet(const std::string &fileName, GDALAccess access = GDALAccess::GA_ReadOnly)
+{
+  GDALDataset  *dataset;
+  return (GDALDataset *) GDALOpen( fileName.c_str(), access );
+}
 
 GdalMess::GdalMess(int argc, char *argv[]):
   Application(argc, argv, "GdalMess")
 { 
   Application::showHelpIfNoArguments(); 
   //Application::addCmdOption("option,o", "example of cmd option");
-  Application::addCmdOption("file,f", "gdal dataset");
+  Application::addCmdOption("in,i", "Source dataset file.");
+  Application::addCmdOption("out,o", "File to be reprojected.");
 }
 
 int GdalMess::main()
 {
   LOG_INF << "GdalMess"; 
 
-  const auto fileName = Application::getCmdOptionValue("file");
+  const auto source = Application::getCmdOptionValue("in");
+  const auto dest = Application::getCmdOptionValue("out");
 
-  GDALDataset  *poDataset;
   GDALAllRegister();
-  poDataset = (GDALDataset *) GDALOpen( fileName.c_str(), GA_ReadOnly );
-  if(!poDataset)
+
+  auto *srcDataset = getDataSet(source);
+  if(!srcDataset)
   {
-    LOG_ERR << "poDataset null";
+    LOG_ERR << "SRC dataset null";
     return 1;
   }
 
-  LOG_INF << "Got dataset!";
+  auto *destDataset = getDataSet(dest, GDALAccess::GA_Update);
+  if(!destDataset)
+  {
+    LOG_ERR << "DEST dataset null";
+    return 1;
+  }
+
+  const char* srcProj = srcDataset->GetProjectionRef();
+  if(!srcProj)
+  {
+    LOG_ERR << "SRC proj null";
+    return 1;
+  }
+
+  double srcGeotransform[6];
+  if( srcDataset->GetGeoTransform( srcGeotransform ) != CE_None )
+  {
+    LOG_ERR << "Cant get SRC geo transform";
+    return 1;
+  }
+ 
+  if(destDataset->SetGeoTransform(srcGeotransform) != CE_None)
+  {
+    LOG_ERR << "Cant SET geo transform";
+    return 1;
+  }
+  if(destDataset->SetProjection(srcProj) != CE_None)
+  {
+    LOG_ERR << "Cant SET projection";
+    return 1;
+  }
+
+  if(const auto gcpCount {srcDataset->GetGCPCount()})
+  {
+    destDataset->SetGCPs(gcpCount, srcDataset->GetGCPs(), srcDataset->GetGCPProjection());
+  }
+
+  GDALClose(srcDataset);
+  GDALClose(destDataset);
+
+  LOG_INF << "All succeded";
 
   return 0;
 }
