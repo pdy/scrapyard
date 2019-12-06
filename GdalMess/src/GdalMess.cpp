@@ -75,33 +75,40 @@ GDALDataset* getDataSet(const std::string &fileName, GDALAccess access = GDALAcc
   return (GDALDataset *) GDALOpen( fileName.c_str(), access );
 }
 
-void copyGeoref(GDALDataset *srcDataset, GDALDataset *destDataset)
+bool copyGeoref(GDALDataset *srcDataset, GDALDataset *destDataset)
 {
   const char* srcProj = srcDataset->GetProjectionRef();
   if(!srcProj)
   {
     LOG_ERR << "SRC proj null";
+    return false;
   }
 
   double srcGeotransform[6];
   if( srcDataset->GetGeoTransform( srcGeotransform ) != CE_None )
   {
     LOG_ERR << "Cant get SRC geo transform";
+    return false;
   }
  
   if(destDataset->SetGeoTransform(srcGeotransform) != CE_None)
   {
     LOG_ERR << "Cant SET geo transform";
+    return false;
   }
   if(destDataset->SetProjection(srcProj) != CE_None)
   {
     LOG_ERR << "Cant SET projection";
+    return false;
   }
 
   if(const auto gcpCount {srcDataset->GetGCPCount()})
   {
     destDataset->SetGCPs(gcpCount, srcDataset->GetGCPs(), srcDataset->GetGCPProjection());
+    return false;
   }
+
+  return true;
 
 }
 
@@ -109,7 +116,6 @@ GdalMess::GdalMess(int argc, char *argv[]):
   Application(argc, argv, "GdalMess")
 { 
   Application::showHelpIfNoArguments(); 
-  //Application::addCmdOption("option,o", "example of cmd option");
   Application::addCmdOption("in,i", "Source dataset file.");
   Application::addCmdOption("out,o", "File to be reprojected.");
 }
@@ -137,13 +143,15 @@ int GdalMess::main()
     return 1;
   }
 
-  copyGeoref(srcDataset, destDataset);
+  if(copyGeoref(srcDataset, destDataset))
+  {
+    LOG_INF << "Copy georef succeded";
+  }
   
 
   GDALClose(srcDataset);
   GDALClose(destDataset);
 
-  LOG_INF << "All succeded";
 
   return 0;
 }
