@@ -1,5 +1,5 @@
 #!/bin/bash
 
 cd build/release/bin/ &&
-./GdalMess -i data/cea.tif -o data/CCITT_2.TIF
+./GdalMess -i data/cea.tif -o data/CCITT_514x515.TIF
 cd -

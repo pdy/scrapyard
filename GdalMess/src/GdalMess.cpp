@@ -68,6 +68,54 @@ if( band->GetColorTable() != NULL )
 }
 */
 
+class GeoTransform
+{
+public:
+  struct ProjectionCoordinates
+  {
+    double Xp;
+    double Yp;
+  };
+
+  GeoTransform(GDALDataset &dataset)
+  {
+    if( dataset.GetGeoTransform(m_gdalGeotransform) != CE_None )
+    {
+      LOG_ERR << "Cant get SRC geo transform";
+      throw "";
+    }
+  } 
+
+  double pixelWidth() const { return m_gdalGeotransform[1]; }
+  double pixelHeight() const { return m_gdalGeotransform[5]; }
+  double upperLeftPixX() const { return m_gdalGeotransform[0]; }
+  double upperLeftPixY() const { return m_gdalGeotransform[3]; }
+
+  void prettyPrint() const
+  {
+    LOG_DBG << "  pixel width [" << pixelWidth() << "]";
+    LOG_DBG << "  pixel height [" << pixelHeight() << "]";
+    LOG_DBG << "  upper left pixel X [" << upperLeftPixX() << "]";
+    LOG_DBG << "  upper left pixel Y [" << upperLeftPixY() << "]";
+  }
+
+  ProjectionCoordinates upperLeftPixPosition() const
+  {
+    return { upperLeftPixX(), upperLeftPixY() };
+  }
+
+  ProjectionCoordinates pixPosition(double pixel, double line) const
+  {
+    const double Xp = upperLeftPixX() + pixel * pixelWidth() + line * m_gdalGeotransform[2];
+    const double Yp = upperLeftPixY() + pixel * m_gdalGeotransform[4] + line * pixelHeight();
+
+    return { Xp, Yp };
+  }
+
+private:
+  double m_gdalGeotransform[6];
+
+};
 
 GDALDataset* getDataSet(const std::string &fileName, GDALAccess access = GDALAccess::GA_ReadOnly)
 {
@@ -75,7 +123,7 @@ GDALDataset* getDataSet(const std::string &fileName, GDALAccess access = GDALAcc
   return (GDALDataset *) GDALOpen( fileName.c_str(), access );
 }
 
-bool copyGeoref(GDALDataset *srcDataset, GDALDataset *destDataset)
+bool copyCoordinateSystem(GDALDataset *srcDataset, GDALDataset *destDataset)
 {
   const char* srcProj = srcDataset->GetProjectionRef();
   if(!srcProj)
@@ -91,11 +139,14 @@ bool copyGeoref(GDALDataset *srcDataset, GDALDataset *destDataset)
     return false;
   }
  
+  /*
   if(destDataset->SetGeoTransform(srcGeotransform) != CE_None)
   {
     LOG_ERR << "Cant SET geo transform";
     return false;
   }
+  */
+
   if(destDataset->SetProjection(srcProj) != CE_None)
   {
     LOG_ERR << "Cant SET projection";
@@ -143,11 +194,20 @@ int GdalMess::main()
     return 1;
   }
 
-  if(copyGeoref(srcDataset, destDataset))
+  if(copyCoordinateSystem(srcDataset, destDataset))
   {
     LOG_INF << "Copy georef succeded";
   }
   
+  GeoTransform srcGeotransform(*srcDataset);  
+  LOG_DBG << source << " geo transform:";
+  srcGeotransform.prettyPrint();
+  LOG_DBG << "";
+
+  GeoTransform destGeotransform(*destDataset);  
+  LOG_DBG << dest << " geo transform:";
+  destGeotransform.prettyPrint();
+  LOG_DBG << "";
 
   GDALClose(srcDataset);
   GDALClose(destDataset);
