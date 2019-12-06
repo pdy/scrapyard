@@ -75,6 +75,36 @@ GDALDataset* getDataSet(const std::string &fileName, GDALAccess access = GDALAcc
   return (GDALDataset *) GDALOpen( fileName.c_str(), access );
 }
 
+void copyGeoref(GDALDataset *srcDataset, GDALDataset *destDataset)
+{
+  const char* srcProj = srcDataset->GetProjectionRef();
+  if(!srcProj)
+  {
+    LOG_ERR << "SRC proj null";
+  }
+
+  double srcGeotransform[6];
+  if( srcDataset->GetGeoTransform( srcGeotransform ) != CE_None )
+  {
+    LOG_ERR << "Cant get SRC geo transform";
+  }
+ 
+  if(destDataset->SetGeoTransform(srcGeotransform) != CE_None)
+  {
+    LOG_ERR << "Cant SET geo transform";
+  }
+  if(destDataset->SetProjection(srcProj) != CE_None)
+  {
+    LOG_ERR << "Cant SET projection";
+  }
+
+  if(const auto gcpCount {srcDataset->GetGCPCount()})
+  {
+    destDataset->SetGCPs(gcpCount, srcDataset->GetGCPs(), srcDataset->GetGCPProjection());
+  }
+
+}
+
 GdalMess::GdalMess(int argc, char *argv[]):
   Application(argc, argv, "GdalMess")
 { 
@@ -107,35 +137,8 @@ int GdalMess::main()
     return 1;
   }
 
-  const char* srcProj = srcDataset->GetProjectionRef();
-  if(!srcProj)
-  {
-    LOG_ERR << "SRC proj null";
-    return 1;
-  }
-
-  double srcGeotransform[6];
-  if( srcDataset->GetGeoTransform( srcGeotransform ) != CE_None )
-  {
-    LOG_ERR << "Cant get SRC geo transform";
-    return 1;
-  }
- 
-  if(destDataset->SetGeoTransform(srcGeotransform) != CE_None)
-  {
-    LOG_ERR << "Cant SET geo transform";
-    return 1;
-  }
-  if(destDataset->SetProjection(srcProj) != CE_None)
-  {
-    LOG_ERR << "Cant SET projection";
-    return 1;
-  }
-
-  if(const auto gcpCount {srcDataset->GetGCPCount()})
-  {
-    destDataset->SetGCPs(gcpCount, srcDataset->GetGCPs(), srcDataset->GetGCPProjection());
-  }
+  copyGeoref(srcDataset, destDataset);
+  
 
   GDALClose(srcDataset);
   GDALClose(destDataset);
