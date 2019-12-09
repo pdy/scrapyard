@@ -71,17 +71,29 @@ if( band->GetColorTable() != NULL )
 class GeoTransform
 {
 public:
-  struct ProjectionCoordinates
+  struct PixelImagePosition
   {
+    double dx {.0};
+    double dy {.0};
+  };
+  struct PixelCoordinates
+  {
+    PixelImagePosition pixelImagePos;
     double Xp;
     double Yp;
+    void prettyPrint() const
+    {
+      LOG_DBG << "Pixel " << pixelImagePos.dx << "x" << pixelImagePos.dy << " maps to coord:";
+      LOG_DBG << "  Xp [" << Xp << "]";
+      LOG_DBG << "  Yp [" << Yp << "]";
+    }
   };
 
   GeoTransform(GDALDataset &dataset)
   {
     if( dataset.GetGeoTransform(m_gdalGeotransform) != CE_None )
     {
-      LOG_ERR << "Cant get SRC geo transform";
+      LOG_ERR << "Cant get geo transform from [" << dataset.GetDescription() << "]";
       throw "";
     }
   } 
@@ -99,17 +111,21 @@ public:
     LOG_DBG << "  upper left pixel Y [" << upperLeftPixY() << "]";
   }
 
-  ProjectionCoordinates upperLeftPixPosition() const
+  PixelCoordinates upperLeftPixPosition() const
   {
-    return { upperLeftPixX(), upperLeftPixY() };
+    return {{}, upperLeftPixX(), upperLeftPixY() };
   }
 
-  ProjectionCoordinates pixPosition(double pixel, double line) const
+  PixelCoordinates pixPosition(double dx, double dy) const
   {
-    const double Xp = upperLeftPixX() + pixel * pixelWidth() + line * m_gdalGeotransform[2];
-    const double Yp = upperLeftPixY() + pixel * m_gdalGeotransform[4] + line * pixelHeight();
+    const double Xp = upperLeftPixX() + dx * pixelWidth() + dy * m_gdalGeotransform[2];
+    const double Yp = upperLeftPixY() + dx * m_gdalGeotransform[4] + dy * pixelHeight();
 
-    return { Xp, Yp };
+    return {{dx, dy}, Xp, Yp };
+//    return {
+//      pixel * pixelWidth() + upperLeftPixX(),
+//      line * pixelHeight() + upperLeftPixY()
+//    };
   }
 
 private:
@@ -119,7 +135,7 @@ private:
 
 GDALDataset* getDataSet(const std::string &fileName, GDALAccess access = GDALAccess::GA_ReadOnly)
 {
-  GDALDataset  *dataset;
+  //GDALDataset  *dataset;
   return (GDALDataset *) GDALOpen( fileName.c_str(), access );
 }
 
@@ -132,6 +148,7 @@ bool copyCoordinateSystem(GDALDataset *srcDataset, GDALDataset *destDataset)
     return false;
   }
 
+  /*
   double srcGeotransform[6];
   if( srcDataset->GetGeoTransform( srcGeotransform ) != CE_None )
   {
@@ -139,7 +156,7 @@ bool copyCoordinateSystem(GDALDataset *srcDataset, GDALDataset *destDataset)
     return false;
   }
  
-  /*
+  
   if(destDataset->SetGeoTransform(srcGeotransform) != CE_None)
   {
     LOG_ERR << "Cant SET geo transform";
@@ -202,8 +219,10 @@ int GdalMess::main()
   GeoTransform srcGeotransform(*srcDataset);  
   LOG_DBG << source << " geo transform:";
   srcGeotransform.prettyPrint();
-  LOG_DBG << "";
+  srcGeotransform.pixPosition(253, 294).prettyPrint();
+  //srcGeotransform.upperLeftPixPosition().prettyPrint();
 
+  /*
   GeoTransform destGeotransform(*destDataset);  
   LOG_DBG << dest << " geo transform:";
   destGeotransform.prettyPrint();
@@ -211,7 +230,7 @@ int GdalMess::main()
 
   GDALClose(srcDataset);
   GDALClose(destDataset);
-
+  */
 
   return 0;
 }
