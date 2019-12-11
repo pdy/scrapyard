@@ -9,6 +9,8 @@
 
 #include <gdal/gdalwarper.h>
 
+#include "ScapsHeader.h"
+
 class GdalMess : public Application
 {
 public:
@@ -18,55 +20,6 @@ protected:
   int main() override;
 };
 
-/*
-void datasetInfo(GDALDataset *dataset)
-{
-  double        adfGeoTransform[6];
-  printf( "Driver: %s/%s\n",
-        dataset->GetDriver()->GetDescription(),
-        dataset->GetDriver()->GetMetadataItem( GDAL_DMD_LONGNAME ) );
-  printf( "Size is %dx%dx%d\n",
-        dataset->GetRasterXSize(), dataset->GetRasterYSize(),
-        dataset->GetRasterCount() );
-  if( dataset->GetProjectionRef()  != NULL )
-    printf( "Projection is `%s'\n", dataset->GetProjectionRef() );
-  if( dataset->GetGeoTransform( adfGeoTransform ) == CE_None )
-  {
-    printf( "Origin = (%.6f,%.6f)\n",
-            adfGeoTransform[0], adfGeoTransform[3] );
-    printf( "Pixel Size = (%.6f,%.6f)\n",
-            adfGeoTransform[1], adfGeoTransform[5] );
-  }
-
-}
-*/
-/*
-void fetchBand(GDALDataset *dataset)
-{
-  GDALRasterBand *band;
-int             nBlockXSize, nBlockYSize;
-int             bGotMin, bGotMax;
-double          adfMinMax[2];
-band = dataset->GetRasterBand( 1 );
-band->GetBlockSize( &nBlockXSize, &nBlockYSize );
-printf( "Block=%dx%d Type=%s, ColorInterp=%s\n",
-        nBlockXSize, nBlockYSize,
-        GDALGetDataTypeName(band->GetRasterDataType()),
-        GDALGetColorInterpretationName(
-            band->GetColorInterpretation()) );
-adfMinMax[0] = band->GetMinimum( &bGotMin );
-adfMinMax[1] = band->GetMaximum( &bGotMax );
-if( ! (bGotMin && bGotMax) )
-    GDALComputeRasterMinMax((GDALRasterBandH)band, TRUE, adfMinMax);
-printf( "Min=%.3fd, Max=%.3f\n", adfMinMax[0], adfMinMax[1] );
-if( band->GetOverviewCount() > 0 )
-    printf( "Band has %d overviews.\n", band->GetOverviewCount() );
-if( band->GetColorTable() != NULL )
-    printf( "Band has a color table with %d entries.\n",
-            band->GetColorTable()->GetColorEntryCount() );
-  
-}
-*/
 
 class GeoTransform
 {
@@ -116,6 +69,13 @@ public:
     return {{}, upperLeftPixX(), upperLeftPixY() };
   }
 
+  bool copyToDataset(GDALDataset &dataset) const
+  {
+    double locGeoTransform[6];
+    std::copy_n(std::begin(m_gdalGeotransform), 6, std::begin(locGeoTransform));
+    return dataset.SetGeoTransform(locGeoTransform) == CE_None;
+  }
+
   PixelCoordinates pixPosition(double dx, double dy) const
   {
     const double Xp = upperLeftPixX() + dx * pixelWidth() + dy * m_gdalGeotransform[2];
@@ -128,7 +88,28 @@ public:
 //    };
   }
 
+  GeoTransform recalcOrigo(const PixelImagePosition &pixel, const PixelCoordinates &pixelCoord) const
+  { 
+    const double origoX = -pixel.dx * pixelWidth() + pixelCoord.Xp;
+    const double origoY = -pixel.dy * pixelHeight() + pixelCoord.Yp;
+
+    double locGeoTransform[6];
+    std::copy_n(std::begin(m_gdalGeotransform), 6, std::begin(locGeoTransform));
+    locGeoTransform[0] = origoX;
+    locGeoTransform[3] = origoY;
+
+    GeoTransform ret(locGeoTransform);
+    return ret;
+  }
+
 private:
+  template< std::size_t N >
+  GeoTransform( double (&array)[N] )
+  {
+    static_assert(N == 6, "Only array of 6");
+    std::copy_n(std::begin(array), 6, std::begin(m_gdalGeotransform));
+  }
+
   double m_gdalGeotransform[6];
 
 };
@@ -217,16 +198,25 @@ int GdalMess::main()
   }
   
   GeoTransform srcGeotransform(*srcDataset);  
-  LOG_DBG << source << " geo transform:";
+  LOG_DBG << source << "SRC geo transform:";
   srcGeotransform.prettyPrint();
-  srcGeotransform.pixPosition(253, 294).prettyPrint();
+  const auto pixCoord = srcGeotransform.pixPosition(299, 181);
+  
+  if(!srcGeotransform.recalcOrigo({226, 371}, pixCoord).copyToDataset(*destDataset))
+  {
+    LOG_ERR << "Copy to dest failed";
+    return 1;
+  }
+
+  GeoTransform destGeotransform(*destDataset);  
+  LOG_DBG << dest << "DEST geo transform:";
+  destGeotransform.prettyPrint();
+  LOG_DBG << "";
+
   //srcGeotransform.upperLeftPixPosition().prettyPrint();
 
   /*
-  GeoTransform destGeotransform(*destDataset);  
-  LOG_DBG << dest << " geo transform:";
-  destGeotransform.prettyPrint();
-  LOG_DBG << "";
+  
 
   GDALClose(srcDataset);
   GDALClose(destDataset);
