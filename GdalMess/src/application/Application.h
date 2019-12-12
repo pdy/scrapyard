@@ -21,8 +21,8 @@ protected:
   Application(int argc, char *argv[], const std::string &appDescription);
 
   virtual bool init();
+  virtual bool configureLogging();
   virtual int main();
-
   std::string getAppName() const;
 
   bool addCmdOption(const std::string &option, const std::string &desc, bool required = true);
@@ -42,7 +42,6 @@ private:
 
   void processArguments(int argc, char *argv[]);
   bool helpRequested() const;
-  bool configureLogging();	
 	
   std::unique_ptr<boost::program_options::variables_map> m_cmdArguments;
   std::unique_ptr<boost::program_options::options_description> m_cmdDesc;

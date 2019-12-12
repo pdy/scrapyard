@@ -8,4 +8,5 @@ fi
 
 cd build/$buildType/bin/ &&
 ./GdalMess -i data/cea.tif -o data/CCITT_514x515.TIF
+#./GdalMess -i data/cea.tif -o data/CCITT_2.TIF
 cd -
