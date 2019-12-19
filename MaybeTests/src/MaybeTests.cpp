@@ -30,8 +30,7 @@ inline neither::Maybe<int> funcInt()
 
 inline neither::Maybe<std::unique_ptr<Type>> funcUptr()
 {
-  auto tmp = std::make_unique<Type>();
-  return neither::Maybe<std::unique_ptr<Type>>(std::move(tmp));
+  return neither::Maybe<std::unique_ptr<Type>>(std::make_unique<Type>());
 }
 
 int MaybeTests::main()
@@ -39,6 +38,8 @@ int MaybeTests::main()
   LOG_INF << "MaybeTests";
   funcInt();
   funcUptr(); 
+
+  neither::Maybe<std::unique_ptr<Type>>(std::make_unique<Type>());
   return 0;
 }
 

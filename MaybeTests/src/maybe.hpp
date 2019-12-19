@@ -30,11 +30,20 @@ template <class T> struct Maybe {
 
   constexpr Maybe(Maybe<void>) : hasValue{false} {}
 
+
+  constexpr Maybe(Maybe<T>&& o) : hasValue{o.hasValue}
+  {
+    if(o.hasValue)
+      value(std::move(o.value)); 
+  }
+
+  /*
   constexpr Maybe(Maybe<T> const &o) : hasValue{o.hasValue} {
     if (o.hasValue) {
       new (&value)T(o.value);
     }
   }
+  */
 
   ~Maybe() {
     if (hasValue) {
@@ -54,86 +63,9 @@ template <class T> struct Maybe {
   constexpr size_type size() const noexcept { return hasValue ? 1: 0; }
   
   constexpr bool empty() const noexcept { return !hasValue; }
-  
-  template<class F>
-    constexpr auto map(F const &f) const&
-    -> Maybe<decltype(f(isCopyable(value)))> {
-    using ReturnType = decltype(f(value));
-    if (!hasValue) {
-      return Maybe<ReturnType>();
-    }
-    return Maybe<ReturnType>(f(value));
-  }
-
-
-  template<class F>
-    auto map(F const& f)&&
-    -> Maybe<decltype(f(std::move(value)))> {
-    using ReturnType = decltype(f(std::move(value)));
-    if (!hasValue) {
-      return Maybe<ReturnType>();
-    }
-    return Maybe<ReturnType>(f(std::move(value)));
-  }
-
-  template <class F>
-  constexpr auto flatMap(F const& f) const&
-    -> decltype(ensureMaybe(f(value))) {
-    using ReturnType = decltype(f(value));
-    if (!hasValue) {
-      return ReturnType();
-    }
-
-    return f(value);
-  }
-
-  template <class F>
-  constexpr auto flatMap(F const& f)&&
-    -> decltype(ensureMaybe(f(std::move(value)))) {
-    using ReturnType = decltype(f(std::move(value)));
-    if (!hasValue) {
-      return ReturnType();
-    }
-
-    return f(std::move(value));
-  }
 
   constexpr operator bool() const { return hasValue; }
 };
-
-template <typename T>
-auto maybe(T value) -> Maybe<T> { return {value}; }
-
-template <typename T = void>
-auto maybe() -> Maybe<T> { return {}; }
-
-namespace {
-
-  inline
-  bool equal(Maybe<void> const&, Maybe<void> const&) {
-    return true;
-  }
-
-  template <typename T>
-  bool equal(Maybe<T> const &a, Maybe<T> const &b) {
-    if (a.hasValue) {
-      return b.hasValue && a.value == b.value;
-    }
-    return !b.hasValue;
-  }
-}
-
-template <typename T>
-bool operator == (Maybe<T> const& a, Maybe<T> const& b) {
-  return equal(a, b);
-}
-
-template <typename T>
-bool operator != (Maybe<T> const& a, Maybe<T> const& b) {
-  return !(a == b);
-}
-
-static const auto none = maybe();
 
 }
 
