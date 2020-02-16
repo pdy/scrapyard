@@ -2,8 +2,6 @@
 #define PDY_LOGGER_H_
 
 #include <boost/log/trivial.hpp>
-#include <boost/log/core.hpp>
-#include <boost/log/expressions.hpp>
 
 #define LOG_TRC BOOST_LOG_TRIVIAL(trace)
 #define LOG_DBG BOOST_LOG_TRIVIAL(debug)

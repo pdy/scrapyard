@@ -1,5 +1,12 @@
 #!/bin/bash
 
-cd build/release/bin/ &&
+buildType="release"
+
+if [ "$1" = "debug" ]; then
+  buildType="debug"
+fi
+
+cd build/$buildType/bin/ &&
 ./GdalMess -i data/cea.tif -o data/CCITT_514x515.TIF
+#./GdalMess -i data/cea.tif -o data/CCITT_2.TIF
 cd -
