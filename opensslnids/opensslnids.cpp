@@ -93,7 +93,7 @@ std::string formSection(const std::string &nidLine)
 
   std::string ret = " NidUTInput {\n";
   const auto nid = getNid(nidLine, pos);
-  log << "NID to be added " << nid;
+  //log << "NID to be added " << nid;
   ret += "  " + nid + ", nid::" + toUpper(stripNid(nid));
   ret += "\n },\n";
 
@@ -103,12 +103,12 @@ std::string formSection(const std::string &nidLine)
 
 std::string getNid(const std::string &nidLine, std::string::size_type nidStartPos)
 {
-  log << "Processing " << nidLine << " nid start " << nidStartPos;
+  //log << "Processing " << nidLine << " nid start " << nidStartPos;
   auto i = nidStartPos;
   while(std::isalnum(nidLine[i]) || nidLine[i] == '_')
       ++i;
 
-  log << "Nid end " << i;
+  //log << "Nid end " << i;
   return nidLine.substr(nidStartPos, i - nidStartPos);
 }
 
