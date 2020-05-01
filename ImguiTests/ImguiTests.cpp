@@ -157,7 +157,7 @@ int main(int argc, char *argv[])
   {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    glfwSwapBuffers(window);
+//    glfwSwapBuffers(window);
     glfwPollEvents();
 
     // feed inputs to dear imgui, start new frame
