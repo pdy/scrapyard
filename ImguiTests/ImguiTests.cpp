@@ -8,14 +8,18 @@
 #include "imgui/imgui.h"
 
 
-std::string programName = "GLFW window";
-int windowWidth = 1200,
-    windowHeight = 800;
-float backgroundR = 0.1f,
+const static std::string programName = "GLFW window";
+
+const static int
+  windowWidth = 1200,
+  windowHeight = 800;
+
+const static float
+      backgroundR = 0.1f,
       backgroundG = 0.3f,
       backgroundB = 0.2f;
 
-static void framebuffer_size_callback(GLFWwindow *window, int width, int height)
+static void framebuffer_size_callback(GLFWwindow* /*window*/, int width, int height)
 {
     glViewport(0, 0, width, height);
 }
@@ -111,6 +115,7 @@ int main(int argc, char *argv[])
     teardown(nullptr);
     return -1;
   }
+  
   // watch window resizing
   glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
   glfwMakeContextCurrent(window);
@@ -136,6 +141,17 @@ int main(int argc, char *argv[])
   glViewport(0, 0, actualWindowWidth, actualWindowHeight);
 
   glClearColor(backgroundR, backgroundG, backgroundB, 1.0f);
+
+  // Setup Dear ImGui context
+  IMGUI_CHECKVERSION();
+  ImGui::CreateContext();
+  //ImGui_ImplOpenGL3_Init();
+  //ImGuiIO &io = ImGui::GetIO(); 
+  ImGui::StyleColorsDark();
+
+  ImGui_ImplGlfw_InitForOpenGL(window, true);
+  ImGui_ImplOpenGL3_Init(glsl_version.c_str());
+
   // --- rendering loop
   while (!glfwWindowShouldClose(window))
   {
@@ -143,24 +159,35 @@ int main(int argc, char *argv[])
 
     glfwSwapBuffers(window);
     glfwPollEvents();
-  }
 
-  teardown(window);
-/*
-   // Setup Dear ImGui context
-  IMGUI_CHECKVERSION();
-  ImGui::CreateContext();
-  ImGui_ImplOpenGL3_Init();
-  ImGui_ImplGlfw_NewFrame();
-  //ImGuiIO &io = ImGui::GetIO();
-    
-  ImGui::StyleColorsDark(); 
-    
-  ImGui::ShowDemoWindow();
+    // feed inputs to dear imgui, start new frame
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+    ImGui::ShowDemoWindow();
+    /*
+    ImGui::Begin("Demo window");
+    ImGui::Button("Hello!");
+    ImGui::End();
+*/
+    // Render dear imgui into screen
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+    int display_w, display_h;
+    glfwGetFramebufferSize(window, &display_w, &display_h);
+    glViewport(0, 0, display_w, display_h);
+    glfwSwapBuffers(window);
+  }
+ 
 
   ImGui_ImplOpenGL3_Shutdown();
   ImGui_ImplGlfw_Shutdown();
   ImGui::DestroyContext(); 
-*/
+
+
+
+  teardown(window);
   return 0;
 }
