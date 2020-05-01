@@ -8,13 +8,13 @@
 #include "imgui/imgui.h"
 
 
-const static std::string programName = "GLFW window";
+static constexpr const char* programName = "GLFW window";
 
-const static int
+constexpr static int
   windowWidth = 1200,
   windowHeight = 800;
 
-const static float
+constexpr static float
       backgroundR = 0.1f,
       backgroundG = 0.3f,
       backgroundB = 0.2f;
@@ -24,17 +24,15 @@ static void framebuffer_size_callback(GLFWwindow* /*window*/, int width, int hei
     glViewport(0, 0, width, height);
 }
 
+static void error_callback(int error, const char* description)
+{
+  log << "[ERROR] code " << error << " " << description;
+}
+
 static void teardown(GLFWwindow *window)
 {
     if (window != nullptr) { glfwDestroyWindow(window); }
     glfwTerminate();
-}
-
-static void logGlfwErr()
-{
-  const char *desc;
-  if(const int code = glfwGetError(&desc); code != GLFW_NO_ERROR)
-    log << "[ERROR] code " << code << " " << desc;
 }
 
 int main(int argc, char *argv[])
@@ -69,13 +67,14 @@ int main(int argc, char *argv[])
 
   if (!glfwInit())
   {
-      log << "[ERROR] Couldn't initialize GLFW";
-      return -1;
+    log << "[ERROR] Couldn't initialize GLFW";
+    return -1;
   }
   else
-  {
-      log << "[INFO] GLFW initialized";
-  }
+    log << "[INFO] GLFW initialized";
+  
+
+  glfwSetErrorCallback(error_callback); 
 
   // setup GLFW window
 
@@ -88,17 +87,16 @@ int main(int argc, char *argv[])
       GLFW_OPENGL_CORE_PROFILE
       );
 
-  std::string glsl_version = "";
 
   // GL 3.2 + GLSL 150
-  glsl_version = "#version 150";
+  const std::string glslVersion = "#version 150";
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 
   GLFWwindow *window = glfwCreateWindow(
       windowWidth,
       windowHeight,
-      programName.c_str(),
+      programName,
       nullptr,
       nullptr
       );
@@ -107,7 +105,6 @@ int main(int argc, char *argv[])
   if (!window)
   {
     log << "[ERROR] Couldn't create a GLFW window";
-    logGlfwErr();
     teardown(nullptr);
     return -1;
   }
@@ -153,7 +150,7 @@ int main(int argc, char *argv[])
   ImGui::StyleColorsLight();
 
   ImGui_ImplGlfw_InitForOpenGL(window, true);
-  ImGui_ImplOpenGL3_Init(glsl_version.c_str());
+  ImGui_ImplOpenGL3_Init(glslVersion.c_str());
 
   // --- rendering loop
   while (!glfwWindowShouldClose(window))
