@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
 {
   cmdline::parser arg;
   arg.add("help", 'h', "Print help.");
-//  arg.add<std::string>("file", 'f', "Example file argument.", true);
+  arg.add<std::string>("font", 'f', "Font", false);
     
   if(!arg.parse(argc, const_cast<const char* const*>(argv)))
   {
@@ -59,17 +59,13 @@ int main(int argc, char *argv[])
     return 0;
   } 
 
-  /* Example file arg check and get
-  if(!arg.exist("file"))
-  {
-    log << "--file or -f argument is mandatory!";
-    log << arg.usage();
-    return 0;
-  }
-  
-  const std::string file = arg.get<std::string>("file");
-  */
-     
+  const std::string font = [&]{
+    if(!arg.exist("font"))
+      return std::string();
+    
+    return arg.get<std::string>("font");
+  }();
+   
 
   if (!glfwInit())
   {
@@ -145,9 +141,16 @@ int main(int argc, char *argv[])
   // Setup Dear ImGui context
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
-  //ImGui_ImplOpenGL3_Init();
-  //ImGuiIO &io = ImGui::GetIO(); 
-  ImGui::StyleColorsDark();
+  if(!font.empty())
+  {
+    ImGuiIO &io = ImGui::GetIO(); 
+    io.Fonts->AddFontFromFileTTF(font.c_str(), 18.0f, nullptr, nullptr);
+  }
+  else
+    log << "[WARNING] No font set";
+  
+  //  ImGui::StyleColorsDark();
+  ImGui::StyleColorsLight();
 
   ImGui_ImplGlfw_InitForOpenGL(window, true);
   ImGui_ImplOpenGL3_Init(glsl_version.c_str());
@@ -155,9 +158,6 @@ int main(int argc, char *argv[])
   // --- rendering loop
   while (!glfwWindowShouldClose(window))
   {
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-//    glfwSwapBuffers(window);
     glfwPollEvents();
 
     // feed inputs to dear imgui, start new frame
@@ -166,18 +166,19 @@ int main(int argc, char *argv[])
     ImGui::NewFrame();
 
     ImGui::ShowDemoWindow();
-    /*
-    ImGui::Begin("Demo window");
-    ImGui::Button("Hello!");
-    ImGui::End();
-*/
+   
+
     // Render dear imgui into screen
     ImGui::Render();
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
     int display_w, display_h;
     glfwGetFramebufferSize(window, &display_w, &display_h);
     glViewport(0, 0, display_w, display_h);
+    //glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
     glfwSwapBuffers(window);
   }
  
@@ -185,8 +186,6 @@ int main(int argc, char *argv[])
   ImGui_ImplOpenGL3_Shutdown();
   ImGui_ImplGlfw_Shutdown();
   ImGui::DestroyContext(); 
-
-
 
   teardown(window);
   return 0;
