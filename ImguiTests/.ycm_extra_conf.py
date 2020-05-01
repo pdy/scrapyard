@@ -15,7 +15,10 @@ flags = [
     '-std=c++17',
     '-stdlib=libstdc++',
     '-x','c++',
-    '-I','.'
+    '-I','.',
+    '-I','./imgui',
+    '-I','./glfw/include',
+    '-I','./glad/include'
 ]
 
 

@@ -5,13 +5,16 @@ STRIP := strip
 
 FLAGS := -std=c++17 -Wno-deprecated-register -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-padded
 
-LD_FLAGS := #-L
+LD_FLAGS := -L./glfw/lib
 
-LD_LIBS := -pthread
+LD_LIBS := -pthread -lglfw3 -ldl -lX11
 
-INCLUDES := -I./imgui
+INCLUDES := -I./imgui -I./glfw/include -I./glad/include
 
-SRC_FILES := $(wildcard ./*.cpp) $(wildcard ./imgui/*.cpp) $(wildcard ./imgui/bindings/*.cpp)
+SRC_FILES := $(wildcard ./*.cpp) \
+	$(wildcard ./imgui/*.cpp) \
+	$(wildcard ./imgui/bindings/*.cpp) \
+	$(wildcard ./glad/src/*.c)
 
 ifeq ($(MAKECMDGOALS),debug)
 	BUILD = ./bin/debug

@@ -1,4 +1,4 @@
-// dear imgui, v1.77 WIP
+// dear imgui, v1.76
 // (widgets code)
 
 /*
@@ -486,7 +486,7 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
 
 #ifdef IMGUI_ENABLE_TEST_ENGINE
     if (id != 0 && window->DC.LastItemId != id)
-        IMGUI_TEST_ENGINE_ITEM_ADD(bb, id);
+        ImGuiTestEngineHook_ItemAdd(&g, bb, id);
 #endif
 
     bool pressed = false;
@@ -500,13 +500,11 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     if (g.DragDropActive && (flags & ImGuiButtonFlags_PressedOnDragDropHold) && !(g.DragDropSourceFlags & ImGuiDragDropFlags_SourceNoHoldToOpenOthers))
         if (IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
         {
-            const float DRAG_DROP_HOLD_TIMER = 0.70f;
             hovered = true;
             SetHoveredID(id);
-            if (CalcTypematicRepeatAmount(g.HoveredIdTimer + 0.0001f - g.IO.DeltaTime, g.HoveredIdTimer + 0.0001f, DRAG_DROP_HOLD_TIMER, 0.00f))
+            if (CalcTypematicRepeatAmount(g.HoveredIdTimer + 0.0001f - g.IO.DeltaTime, g.HoveredIdTimer + 0.0001f, 0.70f, 0.00f))
             {
                 pressed = true;
-                g.DragDropHoldJustPressedId = id;
                 FocusWindow(window);
             }
         }
@@ -1134,7 +1132,6 @@ bool ImGui::RadioButton(const char* label, bool active)
     if (label_size.x > 0.0f)
         RenderText(ImVec2(check_bb.Max.x + style.ItemInnerSpacing.x, check_bb.Min.y + style.FramePadding.y), label);
 
-    IMGUI_TEST_ENGINE_ITEM_INFO(id, label, window->DC.ItemFlags);
     return pressed;
 }
 
@@ -2345,7 +2342,7 @@ float ImGui::SliderCalcRatioFromValueT(ImGuiDataType data_type, TYPE v, TYPE v_m
     return (float)((FLOATTYPE)(v_clamped - v_min) / (FLOATTYPE)(v_max - v_min));
 }
 
-// FIXME: Move some of the code into SliderBehavior(). Current responsibility is larger than what the equivalent DragBehaviorT<> does, we also do some rendering, etc.
+// FIXME: Move some of the code into SliderBehavior(). Current responsability is larger than what the equivalent DragBehaviorT<> does, we also do some rendering, etc.
 template<typename TYPE, typename SIGNEDTYPE, typename FLOATTYPE>
 bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_type, TYPE* v, const TYPE v_min, const TYPE v_max, const char* format, float power, ImGuiSliderFlags flags, ImRect* out_grab_bb)
 {
@@ -2942,7 +2939,7 @@ bool ImGui::InputScalar(const char* label, ImGuiDataType data_type, void* p_data
     if ((flags & (ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsScientific)) == 0)
         flags |= ImGuiInputTextFlags_CharsDecimal;
     flags |= ImGuiInputTextFlags_AutoSelectAll;
-    flags |= ImGuiInputTextFlags_NoMarkEdited;  // We call MarkItemEdited() ourselves by comparing the actual data rather than the string.
+    flags |= ImGuiInputTextFlags_NoMarkEdited;  // We call MarkItemEdited() ourselve by comparing the actual data rather than the string.
 
     if (p_step != NULL)
     {
@@ -3360,7 +3357,7 @@ void ImGuiInputTextCallbackData::InsertChars(int pos, const char* new_text, cons
         if (!is_resizable)
             return;
 
-        // Contrary to STB_TEXTEDIT_INSERTCHARS() this is working in the UTF8 buffer, hence the mildly similar code (until we remove the U16 buffer altogether!)
+        // Contrary to STB_TEXTEDIT_INSERTCHARS() this is working in the UTF8 buffer, hence the midly similar code (until we remove the U16 buffer alltogether!)
         ImGuiContext& g = *GImGui;
         ImGuiInputTextState* edit_state = &g.InputTextState;
         IM_ASSERT(edit_state->ID != 0 && g.ActiveId == edit_state->ID);
@@ -4745,7 +4742,7 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
         if (flags & ImGuiColorEditFlags_DisplayRGB || (flags & ImGuiColorEditFlags__DisplayMask) == 0)
             if (ColorEdit4("##rgb", col, sub_flags | ImGuiColorEditFlags_DisplayRGB))
             {
-                // FIXME: Hackily differentiating using the DragInt (ActiveId != 0 && !ActiveIdAllowOverlap) vs. using the InputText or DropTarget.
+                // FIXME: Hackily differenciating using the DragInt (ActiveId != 0 && !ActiveIdAllowOverlap) vs. using the InputText or DropTarget.
                 // For the later we don't want to run the hue-wrap canceling code. If you are well versed in HSV picker please provide your input! (See #2050)
                 value_changed_fix_hue_wrap = (g.ActiveId != 0 && !g.ActiveIdAllowOverlap);
                 value_changed = true;
@@ -5363,11 +5360,10 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     // It is rather standard that arrow click react on Down rather than Up and we'd be tempted to make it the default
     // (by removing the _OpenOnArrow test below), however this would have a perhaps surprising effect on CollapsingHeader()?
     // So right now we are making this optional. May evolve later.
-    // We set ImGuiButtonFlags_PressedOnClickRelease on OpenOnDoubleClick because we want the item to be active on the initial MouseDown in order for drag and drop to work.
     if (is_mouse_x_over_arrow && (flags & ImGuiTreeNodeFlags_OpenOnArrow))
         button_flags |= ImGuiButtonFlags_PressedOnClick;
     else if (flags & ImGuiTreeNodeFlags_OpenOnDoubleClick)
-        button_flags |= ImGuiButtonFlags_PressedOnClickRelease | ImGuiButtonFlags_PressedOnDoubleClick;
+        button_flags |= ImGuiButtonFlags_PressedOnDoubleClick;
     else
         button_flags |= ImGuiButtonFlags_PressedOnClickRelease;
 
@@ -5379,7 +5375,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     bool toggled = false;
     if (!is_leaf)
     {
-        if (pressed && g.DragDropHoldJustPressedId != id)
+        if (pressed)
         {
             if ((flags & (ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick)) == 0 || (g.NavActivateId == id))
                 toggled = true;
@@ -5387,12 +5383,8 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
                 toggled |= is_mouse_x_over_arrow && !g.NavDisableMouseHover; // Lightweight equivalent of IsMouseHoveringRect() since ButtonBehavior() already did the job
             if ((flags & ImGuiTreeNodeFlags_OpenOnDoubleClick) && g.IO.MouseDoubleClicked[0])
                 toggled = true;
-        }
-        else if (pressed && g.DragDropHoldJustPressedId == id)
-        {
-            IM_ASSERT(button_flags & ImGuiButtonFlags_PressedOnDragDropHold);
-            if (!is_open) // When using Drag and Drop "hold to open" we keep the node highlighted after opening, but never close it again.
-                toggled = true;
+            if (g.DragDropActive && is_open) // When using Drag and Drop "hold to open" we keep the node highlighted after opening, but never close it again.
+                toggled = false;
         }
 
         if (g.NavId == id && g.NavMoveRequest && g.NavMoveDir == ImGuiDir_Left && is_open)
@@ -5493,8 +5485,7 @@ void ImGui::TreePush(const void* ptr_id)
 
 void ImGui::TreePushOverrideID(ImGuiID id)
 {
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
+    ImGuiWindow* window = GetCurrentWindow();
     Indent();
     window->DC.TreeDepth++;
     window->IDStack.push_back(id);
@@ -6249,7 +6240,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
         g.NavWindow = window;  // Odd hack to allow hovering across menus of a same menu-set (otherwise we wouldn't be able to hover parent)
 
     // The reference position stored in popup_pos will be used by Begin() to find a suitable position for the child menu,
-    // However the final position is going to be different! It is chosen by FindBestWindowPosForPopup().
+    // However the final position is going to be different! It is choosen by FindBestWindowPosForPopup().
     // e.g. Menus tend to overlap each other horizontally to amplify relative Z-ordering.
     ImVec2 popup_pos, pos = window->DC.CursorPos;
     if (window->DC.LayoutType == ImGuiLayoutType_Horizontal)
@@ -7032,7 +7023,6 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
     const ImGuiID id = TabBarCalcTabID(tab_bar, label);
 
     // If the user called us with *p_open == false, we early out and don't render. We make a dummy call to ItemAdd() so that attempts to use a contextual popup menu with an implicit ID won't use an older ID.
-    IMGUI_TEST_ENGINE_ITEM_INFO(id, label, window->DC.LastItemStatusFlags);
     if (p_open && !*p_open)
     {
         PushItemFlag(ImGuiItemFlags_NoNav | ImGuiItemFlags_NoNavDefaultFocus, true);
