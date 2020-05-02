@@ -9,7 +9,7 @@ LD_FLAGS := -L./glfw/lib
 
 LD_LIBS := -pthread -lglfw3 -ldl -lX11
 
-INCLUDES := -I./imgui -I./glfw/include -I./glad/include
+INCLUDES := -isystem./imgui -isystem./glfw/include -isystem./glad/include
 
 SRC_FILES := $(wildcard ./*.cpp) \
 	$(wildcard ./imgui/*.cpp) \
@@ -42,7 +42,7 @@ strip:
 PROGRAMS: $(BUILD)/ImguiTests 
 
 $(BUILD)/ImguiTests: $(SRC_FILES)
-	@$(CXX) $(CXXFLAGS) -o $@ $^ $(LD_FLAGS) $(LD_LIBS)
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LD_FLAGS) $(LD_LIBS)
 	@echo "$<"
 
 

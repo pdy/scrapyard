@@ -17,9 +17,9 @@ flags = [
     '-stdlib=libstdc++',
     '-x','c++',
     '-I','.',
-    '-I','./imgui',
-    '-I','./glfw/include',
-    '-I','./glad/include'
+    '-isystem','./imgui',
+    '-isystem','./glfw/include',
+    '-isystem','./glad/include'
 ]
 
 
