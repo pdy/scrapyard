@@ -3,8 +3,8 @@
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-#include "imgui/bindings/imgui_impl_glfw.h"
-#include "imgui/bindings/imgui_impl_opengl3.h"
+#include "imgui/imgui_impl_glfw.h"
+#include "imgui/imgui_impl_opengl3.h"
 #include "imgui/imgui.h"
 
 
@@ -185,6 +185,9 @@ int main(int argc, char *argv[])
 //  processInput(window);
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    //----Render--------------------------
+    //************************************************
 
 
     // feed inputs to dear imgui, start new frame

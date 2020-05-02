@@ -13,7 +13,6 @@ INCLUDES := -isystem./imgui -isystem./glfw/include -isystem./glad/include
 
 SRC_FILES := $(wildcard ./*.cpp) \
 	$(wildcard ./imgui/*.cpp) \
-	$(wildcard ./imgui/bindings/*.cpp) \
 	$(wildcard ./glad/src/*.c)
 
 ifeq ($(MAKECMDGOALS),debug)
