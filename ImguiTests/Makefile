@@ -42,7 +42,7 @@ strip:
 PROGRAMS: $(BUILD)/ImguiTests 
 
 $(BUILD)/ImguiTests: $(SRC_FILES)
-	$(CXX) $(CXXFLAGS) -o $@ $^ $(LD_FLAGS) $(LD_LIBS)
+	@$(CXX) $(CXXFLAGS) -o $@ $^ $(LD_FLAGS) $(LD_LIBS)
 	@echo "$<"
 
 
