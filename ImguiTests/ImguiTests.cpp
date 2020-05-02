@@ -15,9 +15,9 @@ constexpr static int
   windowHeight = 800;
 
 constexpr static float
-      backgroundR = 0.1f,
+      backgroundR = 0.2f,
       backgroundG = 0.3f,
-      backgroundB = 0.2f;
+      backgroundB = 0.3f;
 
 static void frameBufferSizeCallback(GLFWwindow* /*window*/, int width, int height)
 {
@@ -51,6 +51,62 @@ static void processInput(GLFWwindow *window)
 }
 */
 
+static GLFWwindow* initGLFW()
+{
+  if (!glfwInit())
+  {
+    log << "[ERROR] Couldn't initialize GLFW";
+    return nullptr;
+  }
+  else
+    log << "[INFO] GLFW initialized";
+  
+
+  glfwSetErrorCallback(errorCallback); 
+
+  // setup GLFW window
+  glfwWindowHint(GLFW_DOUBLEBUFFER , 1);
+  glfwWindowHint(GLFW_DEPTH_BITS, 24);
+  glfwWindowHint(GLFW_STENCIL_BITS, 8);
+
+  glfwWindowHint(
+      GLFW_OPENGL_PROFILE,
+      GLFW_OPENGL_CORE_PROFILE
+      );
+
+
+  // GL 3.3
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+
+  GLFWwindow *window = glfwCreateWindow(
+      windowWidth,
+      windowHeight,
+      programName,
+      nullptr,
+      nullptr
+      );
+  
+
+  if (!window)
+  {
+    log << "[ERROR] Couldn't create a GLFW window";
+    close(nullptr);
+    return nullptr;
+  }
+ 
+  glfwSetKeyCallback(window, keyCallback); 
+  
+  // watch window resizing
+  glfwSetFramebufferSizeCallback(window, frameBufferSizeCallback);
+  glfwMakeContextCurrent(window);
+  
+  // VSync
+  glfwSwapInterval(1);
+
+  return window;
+}
+
 int main(int argc, char *argv[])
 {
   cmdline::parser arg;
@@ -81,58 +137,9 @@ int main(int argc, char *argv[])
   }();
    
 
-  if (!glfwInit())
-  {
-    log << "[ERROR] Couldn't initialize GLFW";
-    return -1;
-  }
-  else
-    log << "[INFO] GLFW initialized";
-  
-
-  glfwSetErrorCallback(errorCallback); 
-
-  // setup GLFW window
-
-  glfwWindowHint(GLFW_DOUBLEBUFFER , 1);
-  glfwWindowHint(GLFW_DEPTH_BITS, 24);
-  glfwWindowHint(GLFW_STENCIL_BITS, 8);
-
-  glfwWindowHint(
-      GLFW_OPENGL_PROFILE,
-      GLFW_OPENGL_CORE_PROFILE
-      );
-
-
-  // GL 3.3 + GLSL 150
-  const std::string glslVersion = "#version 150";
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-
-  GLFWwindow *window = glfwCreateWindow(
-      windowWidth,
-      windowHeight,
-      programName,
-      nullptr,
-      nullptr
-      );
-  
-
-  if (!window)
-  {
-    log << "[ERROR] Couldn't create a GLFW window";
-    close(nullptr);
-    return -1;
-  }
- 
-  glfwSetKeyCallback(window, keyCallback); 
-  
-  // watch window resizing
-  glfwSetFramebufferSizeCallback(window, frameBufferSizeCallback);
-  glfwMakeContextCurrent(window);
-  
-  // VSync
-  glfwSwapInterval(1);
+  GLFWwindow *window = initGLFW();
+  if(!window)
+   return -1; 
 
   if (!gladLoadGLLoader( reinterpret_cast<GLADloadproc>(glfwGetProcAddress)))
   {
@@ -167,6 +174,7 @@ int main(int argc, char *argv[])
   //  ImGui::StyleColorsDark();
   ImGui::StyleColorsLight();
 
+  const std::string glslVersion = "#version 150";
   ImGui_ImplGlfw_InitForOpenGL(window, true);
   ImGui_ImplOpenGL3_Init(glslVersion.c_str());
 
@@ -176,7 +184,6 @@ int main(int argc, char *argv[])
     glfwPollEvents();
 //  processInput(window);
 
-    //glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
