@@ -15,9 +15,9 @@ constexpr static int
   windowHeight = 800;
 
 constexpr static float
-      backgroundR = 0.2f,
-      backgroundG = 0.3f,
-      backgroundB = 0.3f;
+  backgroundR = 0.2f,
+  backgroundG = 0.3f,
+  backgroundB = 0.3f;
 
 static void frameBufferSizeCallback(GLFWwindow* /*window*/, int width, int height)
 {
