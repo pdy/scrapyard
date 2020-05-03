@@ -1,11 +1,7 @@
 #include "cmdline/cmdline.h"
 #include "simplelog/simplelog.h"
 
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
-#include "imgui/imgui_impl_glfw.h"
-#include "imgui/imgui_impl_opengl3.h"
-#include "imgui/imgui.h"
+#include "include.h"
 
 
 static constexpr const char* programName = "GLFW window";
@@ -19,93 +15,19 @@ constexpr static float
   backgroundG = 0.3f,
   backgroundB = 0.3f;
 
-static void frameBufferSizeCallback(GLFWwindow* /*window*/, int width, int height)
-{
-  glViewport(0, 0, width, height);
-}
+//static void keyCallback(GLFWwindow* window, int key, int /*scancode*/, int action, int /*mods*/)
+//{
+//  if (action == GLFW_PRESS && key == GLFW_KEY_ESCAPE)
+//    glfwSetWindowShouldClose(window, GLFW_TRUE);
+//}
 
-static void errorCallback(int error, const char* description)
-{
-  log << "[ERROR] code " << error << " " << description;
-}
 
-static void keyCallback(GLFWwindow* window, int key, int /*scancode*/, int action, int /*mods*/)
-{
-  if (action == GLFW_PRESS && key == GLFW_KEY_ESCAPE)
-    glfwSetWindowShouldClose(window, GLFW_TRUE);
-}
-
-static void close(GLFWwindow *window)
-{
-  if (window)
-    glfwDestroyWindow(window);
-
-  glfwTerminate();
-}
-
-/*
 static void processInput(GLFWwindow *window)
 {
   if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
     glfwSetWindowShouldClose(window, true);
 }
-*/
 
-static GLFWwindow* initGLFW()
-{
-  if (!glfwInit())
-  {
-    log << "[ERROR] Couldn't initialize GLFW";
-    return nullptr;
-  }
-  else
-    log << "[INFO] GLFW initialized";
-  
-
-  glfwSetErrorCallback(errorCallback); 
-
-  // setup GLFW window
-  glfwWindowHint(GLFW_DOUBLEBUFFER , 1);
-  glfwWindowHint(GLFW_DEPTH_BITS, 24);
-  glfwWindowHint(GLFW_STENCIL_BITS, 8);
-
-  glfwWindowHint(
-      GLFW_OPENGL_PROFILE,
-      GLFW_OPENGL_CORE_PROFILE
-      );
-
-
-  // GL 3.3
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-
-  GLFWwindow *window = glfwCreateWindow(
-      windowWidth,
-      windowHeight,
-      programName,
-      nullptr,
-      nullptr
-      );
-  
-
-  if (!window)
-  {
-    log << "[ERROR] Couldn't create a GLFW window";
-    close(nullptr);
-    return nullptr;
-  }
- 
-  glfwSetKeyCallback(window, keyCallback); 
-  
-  // watch window resizing
-  glfwSetFramebufferSizeCallback(window, frameBufferSizeCallback);
-  glfwMakeContextCurrent(window);
-  
-  // VSync
-  glfwSwapInterval(1);
-
-  return window;
-}
 
 int main(int argc, char *argv[])
 {
@@ -137,14 +59,14 @@ int main(int argc, char *argv[])
   }();
    
 
-  GLFWwindow *window = initGLFW();
+  GLFWwindow *window = pdy::initGLFW(programName, windowWidth, windowHeight);
   if(!window)
    return -1; 
 
   if (!gladLoadGLLoader( reinterpret_cast<GLADloadproc>(glfwGetProcAddress)))
   {
     log << "[ERROR] Couldn't initialize GLAD";
-    close(window);
+    pdy::terminateGLFW(window);
     return -1;
   }
   else
@@ -182,7 +104,7 @@ int main(int argc, char *argv[])
   while (!glfwWindowShouldClose(window))
   {
     glfwPollEvents();
-//  processInput(window);
+    processInput(window);
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -214,6 +136,6 @@ int main(int argc, char *argv[])
   ImGui_ImplGlfw_Shutdown();
   ImGui::DestroyContext(); 
 
-  close(window);
+  pdy::terminateGLFW(window);
   return 0;
 }
