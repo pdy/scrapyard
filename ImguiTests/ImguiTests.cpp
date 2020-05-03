@@ -24,10 +24,11 @@ constexpr static float
 
 static void processInput(GLFWwindow *window)
 {
+  
   if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
     glfwSetWindowShouldClose(window, true);
-}
 
+}
 
 int main(int argc, char *argv[])
 {
@@ -100,6 +101,13 @@ int main(int argc, char *argv[])
   ImGui_ImplGlfw_InitForOpenGL(window, true);
   ImGui_ImplOpenGL3_Init(glslVersion.c_str());
 
+  const auto rect = pdy::createRectangleGLBuffer();
+  if(!rect)
+    return -1;
+
+  // uncomment this call to draw in wireframe polygons.
+  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
   // --- rendering loop
   while (!glfwWindowShouldClose(window))
   {
@@ -111,6 +119,10 @@ int main(int argc, char *argv[])
     //----Render--------------------------
     //************************************************
 
+    glUseProgram(rect->shaderProgram);
+    glBindVertexArray(rect->VAO);
+    glDrawElements(GL_TRIANGLES, rect->indicesCount, GL_UNSIGNED_INT, nullptr);
+//    glDrawArrays(GL_TRIANGLES, 0, 4);
 
     // feed inputs to dear imgui, start new frame
     ImGui_ImplOpenGL3_NewFrame();

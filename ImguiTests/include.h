@@ -8,6 +8,8 @@
 #include "imgui/imgui.h"
 
 #include "simplelog/simplelog.h"
+#include <tuple>
+#include <optional>
 
 namespace pdy {
 
@@ -99,6 +101,18 @@ inline GLFWwindow* initGLFW(const std::string &programName, int windowWidth, int
 {
   return initGLFW(programName, windowWidth, windowHeight, ::pdy::errorCallback, ::pdy::frameBufferSizeCallback);
 }
+
+std::tuple<bool, std::string> isShaderProgramCompSuccess(unsigned int programId);
+std::tuple<bool, std::string> isShaderCompSuccess(unsigned int shaderId);
+std::optional<unsigned int> compileShader(const char *shaderSource, unsigned int shaderType);
+struct RectResult
+{
+  unsigned int VAO;
+  unsigned int shaderProgram;
+  unsigned int indicesCount;
+};
+
+std::optional<RectResult> createRectangleGLBuffer();
 
 } // namespace pdy
 

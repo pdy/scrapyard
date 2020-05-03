@@ -34,7 +34,7 @@ OBJS_IMGUI := $(patsubst ./imgui/%.cpp,$(OBJ_IMGUI_DIR)/%.o,$(SRC_IMGUI))
 
 .PHONY: all clean
 
-all: dist PROGRAMS strip
+all: dist PROGRAMS
 debug: all
 
 dist:
