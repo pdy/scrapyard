@@ -105,14 +105,17 @@ inline GLFWwindow* initGLFW(const std::string &programName, int windowWidth, int
 std::tuple<bool, std::string> isShaderProgramCompSuccess(unsigned int programId);
 std::tuple<bool, std::string> isShaderCompSuccess(unsigned int shaderId);
 std::optional<unsigned int> compileShader(const char *shaderSource, unsigned int shaderType);
-struct RectResult
+struct Result
 {
   unsigned int VAO;
   unsigned int shaderProgram;
-  unsigned int indicesCount;
+  unsigned int count;
 };
 
-std::optional<RectResult> createRectangleGLBuffer();
+std::optional<Result> createRectangleGLBuffer();
+
+
+std::optional<Result> createTwoTrianglesNextToEachOther();
 
 } // namespace pdy
 
