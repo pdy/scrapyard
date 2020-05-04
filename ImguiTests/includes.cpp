@@ -200,14 +200,14 @@ void main()
 
   const float vertices[] {
     // first triangle - left; pointing top
-    -0.3f,  0.3f, .0, // top 
-    -0.6f, -0.3f, .0, // left 
-     0.0f, -0.3f, .0, // right 
+    -0.5f,  0.8f, .0, // top 
+    -0.8f,  0.2f, .0, // left 
+    -0.2f,  0.2f, .0, // right 
 
     // second triangle - right; pointing down
-     0.3f, -0.3f, .0, // bottom 
-     0.0f,  0.3f, .0, // left 
-     0.6f,  0.3f, .0, // right
+     0.5f,  0.2f, .0, // bottom 
+     0.2f,  0.8f, .0, // left 
+     0.8f,  0.8f, .0, // right
   };
 
 

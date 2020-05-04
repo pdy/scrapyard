@@ -7,8 +7,8 @@
 static constexpr const char* programName = "GLFW window";
 
 constexpr static int
-  windowWidth = 1200,
-  windowHeight = 800;
+  windowWidth = 1600,
+  windowHeight = 1200;
 
 constexpr static float
   backgroundR = 0.2f,
