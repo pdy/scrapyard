@@ -38,6 +38,111 @@ std::optional<unsigned int> compileShader(const char *shaderSource, unsigned int
   return shaderId;
 }
 
+
+std::optional<Result> createTwoRects()
+{
+  const std::string vertexShaderSource = R"(#version 330 core
+layout (location = 0) in vec3 aPos;
+void main()
+{
+    gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
+})";
+
+  const auto vertexShader = compileShader(vertexShaderSource.c_str(), GL_VERTEX_SHADER);
+  if(!vertexShader)
+    return std::nullopt; 
+
+  log << "[INFO] compiled vertex shader";
+
+  const std::string fragColorShaderSource = R"(#version 330 core
+out vec4 FragColor;
+void main()
+{
+    FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);
+})";
+
+
+  const auto colorShader = compileShader(fragColorShaderSource.c_str(), GL_FRAGMENT_SHADER);
+  if(!colorShader)
+    return std::nullopt;
+    
+  log << "[INFO] fragment color shader";
+
+  
+  unsigned int shaderProgram = glCreateProgram();
+  glAttachShader(shaderProgram, *vertexShader);
+  glAttachShader(shaderProgram, *colorShader);
+  glLinkProgram(shaderProgram);
+  glDeleteShader(*vertexShader);
+  glDeleteShader(*colorShader);
+
+  if(const auto[status, msg] = isShaderProgramCompSuccess(shaderProgram); !status)
+  {
+    log << "[ERROR] Shader program compilation failed " << msg;
+    return std::nullopt;
+  }
+
+  log << "[INFO] compiled shader program";
+ 
+  const float vertices[] {
+    // left
+    -0.8f, -0.1f, .0, // left low
+    -0.1f, -0.1f, .0, // right low
+    -0.8f,  0.8f, .0, // left high
+    -0.1f,  0.8f, .0,  // right high
+
+    // right
+     0.1f, -0.1f, .0, // left low
+     0.8f, -0.1f, .0, // right low
+     0.1f,  0.8f, .0, // left high
+     0.8f,  0.8f, .0,  // right high
+  };
+
+//  const unsigned int indices []{0,1,2,3};
+  const unsigned int indicesLeft []{
+    // left
+    0,1,3,
+    0,2,3,
+
+    // right
+    4,5,7,
+    4,6,7
+  };
+
+  const unsigned int VAO = []{ unsigned int ret; glGenVertexArrays(1, &ret); return ret;}();
+  const unsigned int VBO = []{ unsigned int ret; glGenBuffers(1, &ret); return ret; }();
+  const unsigned int EBO = []{ unsigned int ret; glGenBuffers(1, &ret); return ret; }();
+  // const unsigned int EBO_RIGHT = []{ unsigned int ret; glGenBuffers(1, &ret); return ret; }();
+
+  // 1. bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
+  glBindVertexArray(VAO); 
+
+  // 2. copy our vertices array in a buffer for OpenGL to use
+  glBindBuffer(GL_ARRAY_BUFFER, VBO);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW); // GL_STATIC_DRAW cause we're setting position which does not change
+
+  // 3. copy our index array in a element buffer for OpenGL to use
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indicesLeft), indicesLeft, GL_STATIC_DRAW);
+
+ // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO_RIGHT);
+ // glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indicesRight), indicesRight, GL_STATIC_DRAW);
+
+
+  // 3. then set our vertex attributes pointers
+  glVertexAttribPointer(
+      0,                          // location = 0 in vertexShader
+      3,                          // vec3 in vertexShader - size of vertex attribute
+      GL_FLOAT,                   // type of data
+      GL_FALSE,                   // normalize
+      3 * sizeof(float),          // stride - 3x of float we have next set of data
+      reinterpret_cast<void*>(0));// offset of where the position data begins in buffer
+
+  glEnableVertexAttribArray(0);   // enable vertex attribute at location 0
+
+  return Result{ VAO, shaderProgram, std::size(indicesLeft)};
+}
+
 std::optional<Result> createRectangleGLBuffer()
 {
   const std::string vertexShaderSource = R"(#version 330 core

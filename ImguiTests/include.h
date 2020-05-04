@@ -122,6 +122,7 @@ struct ResultEx
 };
 
 std::optional<Result> createRectangleGLBuffer();
+std::optional<Result> createTwoRects();
 std::optional<Result> createTwoTrianglesNextToEachOther();
 std::optional<ResultEx> createTwoTrianglesNextToEachOtherDifferentColors();
 

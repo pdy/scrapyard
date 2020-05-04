@@ -120,10 +120,16 @@ int main(int argc, char *argv[])
   const auto triang_2 = pdy::createTriangle_2();
   if(!triang_2)
     return -1;
-*/
+
 
   const auto twoTriangs = pdy::createTwoTrianglesNextToEachOtherDifferentColors();
   if(!twoTriangs)
+    return -1;
+
+*/
+
+  const auto twoRects = pdy::createTwoRects();
+  if(!twoRects)
     return -1;
 
   // uncomment this call to draw in wireframe polygons.
@@ -140,13 +146,13 @@ int main(int argc, char *argv[])
     //----Render--------------------------
     //************************************************
 
-    glUseProgram(twoTriangs->shaderProgram_1);
-    glBindVertexArray(twoTriangs->VAO);
-    glDrawArrays(GL_TRIANGLES, 0, twoTriangs->shader1Count);
-//    glDrawElements(GL_TRIANGLES, rect->count, GL_UNSIGNED_INT, nullptr);
-    glUseProgram(twoTriangs->shaderProgram_2);
+    glUseProgram(twoRects->shaderProgram);
+    glBindVertexArray(twoRects->VAO);
+//    glDrawArrays(GL_TRIANGLES, 0, twoTriangs->shader1Count);
+    glDrawElements(GL_TRIANGLES, twoRects->count, GL_UNSIGNED_INT, nullptr);
+
 //    glBindVertexArray(triang_2->VAO);
-    glDrawArrays(GL_TRIANGLES, twoTriangs->shader1Count, twoTriangs->shader2Count);
+//    glDrawArrays(GL_TRIANGLES, twoTriangs->shader1Count, twoTriangs->shader2Count);
     
     // feed inputs to dear imgui, start new frame
     ImGui_ImplOpenGL3_NewFrame();
