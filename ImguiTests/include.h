@@ -112,8 +112,18 @@ struct Result
   unsigned int count;
 };
 
+struct ResultEx
+{
+  unsigned int VAO;
+  unsigned int shaderProgram_1;
+  unsigned int shaderProgram_2;
+  unsigned int shader1Count;
+  unsigned int shader2Count;
+};
+
 std::optional<Result> createRectangleGLBuffer();
 std::optional<Result> createTwoTrianglesNextToEachOther();
+std::optional<ResultEx> createTwoTrianglesNextToEachOtherDifferentColors();
 
 std::optional<Result> createTriangle_1();
 std::optional<Result> createTriangle_2();
