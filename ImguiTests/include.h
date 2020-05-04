@@ -113,9 +113,10 @@ struct Result
 };
 
 std::optional<Result> createRectangleGLBuffer();
-
-
 std::optional<Result> createTwoTrianglesNextToEachOther();
+
+std::optional<Result> createTriangle_1();
+std::optional<Result> createTriangle_2();
 
 } // namespace pdy
 

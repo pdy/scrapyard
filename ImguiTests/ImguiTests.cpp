@@ -101,14 +101,24 @@ int main(int argc, char *argv[])
   ImGui_ImplGlfw_InitForOpenGL(window, true);
   ImGui_ImplOpenGL3_Init(glslVersion.c_str());
 
-  /*
+/*
   const auto rect = pdy::createRectangleGLBuffer();
   if(!rect)
     return -1;
-*/
+
 
   const auto triang = pdy::createTwoTrianglesNextToEachOther();
   if(!triang)
+    return -1;
+*/
+
+
+  const auto triang_1 = pdy::createTriangle_1();
+  if(!triang_1)
+    return -1;
+
+  const auto triang_2 = pdy::createTriangle_2();
+  if(!triang_2)
     return -1;
 
   // uncomment this call to draw in wireframe polygons.
@@ -125,11 +135,14 @@ int main(int argc, char *argv[])
     //----Render--------------------------
     //************************************************
 
-    glUseProgram(triang->shaderProgram);
-    glBindVertexArray(triang->VAO);
+    glUseProgram(triang_1->shaderProgram);
+    glBindVertexArray(triang_1->VAO);
+    glDrawArrays(GL_TRIANGLES, 0, triang_1->count);
 //    glDrawElements(GL_TRIANGLES, rect->count, GL_UNSIGNED_INT, nullptr);
-    glDrawArrays(GL_TRIANGLES, 0, triang->count);
-
+    glUseProgram(triang_2->shaderProgram);
+    glBindVertexArray(triang_2->VAO);
+    glDrawArrays(GL_TRIANGLES, 0, triang_2->count);
+    
     // feed inputs to dear imgui, start new frame
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
