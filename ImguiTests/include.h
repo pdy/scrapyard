@@ -121,6 +121,9 @@ struct ResultEx
   unsigned int shader2Count;
 };
 
+enum class Color{orange, yellow};
+std::optional<Result> createRect(float ndcOrigoX, float ndcOrigoY, float ndcWidth, float ndcHeight, Color color = Color::orange);
+
 std::optional<Result> createRectangleGLBuffer();
 std::optional<Result> createTwoRects();
 std::optional<Result> createTwoTrianglesNextToEachOther();

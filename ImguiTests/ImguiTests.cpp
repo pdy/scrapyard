@@ -126,11 +126,24 @@ int main(int argc, char *argv[])
   if(!twoTriangs)
     return -1;
 
-*/
-
   const auto twoRects = pdy::createTwoRects();
   if(!twoRects)
     return -1;
+*/
+
+  const auto leftRect = pdy::createRect(-0.8f, 0.8f, 0.7f, 0.7f);
+  if(!leftRect)
+  {
+    log << "[ERROR] Failed left rect";
+    return -1;
+  }
+
+  const auto rightRect = pdy::createRect(0.1f, 0.8f, 0.7f, 0.7f, pdy::Color::yellow);
+  if(!leftRect)
+  {
+    log << "[ERROR] Failed right rect";
+    return -1;
+  }
 
   // uncomment this call to draw in wireframe polygons.
 //  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -146,10 +159,14 @@ int main(int argc, char *argv[])
     //----Render--------------------------
     //************************************************
 
-    glUseProgram(twoRects->shaderProgram);
-    glBindVertexArray(twoRects->VAO);
+    glUseProgram(leftRect->shaderProgram);
+    glBindVertexArray(leftRect->VAO);
 //    glDrawArrays(GL_TRIANGLES, 0, twoTriangs->shader1Count);
-    glDrawElements(GL_TRIANGLES, twoRects->count, GL_UNSIGNED_INT, nullptr);
+    glDrawElements(GL_TRIANGLES, leftRect->count, GL_UNSIGNED_INT, nullptr);
+
+    glUseProgram(rightRect->shaderProgram);
+    glBindVertexArray(rightRect->VAO);
+    glDrawElements(GL_TRIANGLES, rightRect->count, GL_UNSIGNED_INT, nullptr);
 
 //    glBindVertexArray(triang_2->VAO);
 //    glDrawArrays(GL_TRIANGLES, twoTriangs->shader1Count, twoTriangs->shader2Count);
