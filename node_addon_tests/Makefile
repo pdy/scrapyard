@@ -3,12 +3,6 @@ print-%  : ; @echo $* = $($*)
 CXX := clang++
 STRIP := strip
 
-FLAGS := -fPIC -std=c++17 -Wno-deprecated-register -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-padded
-
-LD_FLAGS := #-L
-
-LD_LIBS := -pthread
-
 INCLUDES := 
 
 ifeq ($(MAKECMDGOALS),debug)
@@ -20,12 +14,16 @@ else
 	CXXFLAGS = $(FLAGS) $(INCLUDES) -O3 -Wall
 endif
 
+FLAGS := -fPIC -std=c++17 -Wno-deprecated-register -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-padded
+LD_FLAGS := -L$(BUILD)/
+LD_LIBS := -l:test_addon.so -pthread
+
 SRC_FILES := $(wildcard ./*.cpp)
 
 OBJ_DIR := $(BUILD)/obj
 OBJS := $(patsubst ./%.cpp,$(OBJ_DIR)/%.o,$(SRC_FILES))
 
-.PHONY: all clean
+.PHONY: all clean addon
 
 all: dist PROGRAMS strip
 debug: all
@@ -37,7 +35,8 @@ clean:
 	@rm -r ./bin
 
 
-PROGRAMS: $(BUILD)/node_addon_tests $(BUILD)/test_addon.so
+PROGRAMS: $(BUILD)/node_addon_tests
+addon: dist $(BUILD)/test_addon.so	
 
 strip:
 	$(STRIP) $(BUILD)/node_addon_tests
