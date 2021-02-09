@@ -21,6 +21,30 @@ constexpr static float
 //    glfwSetWindowShouldClose(window, GLFW_TRUE);
 //}
 
+static std::string getGLString(unsigned int strId)
+{
+  const unsigned char *str = glGetString(strId);
+  const unsigned char *it = str;
+  
+  std::string ret;
+  while(it && *it)
+  {
+    ret.push_back(static_cast<char>(*it));
+    ++it;
+  }
+
+  return ret;
+}
+
+static std::string glVerStr()
+{
+  return getGLString(GL_VERSION);
+}
+
+static std::string glShadingLangVerStr()
+{
+  return getGLString(GL_SHADING_LANGUAGE_VERSION);
+}
 
 static void processInput(GLFWwindow *window)
 {
@@ -93,7 +117,10 @@ int main(int argc, char *argv[])
   }
   else
     log << "[WARNING] No font set";
-  
+
+  log << "GL_VERSION: " << glVerStr();
+  log << "GL_SHADING_LANGUAGE_VERSION: " << glShadingLangVerStr();
+
   //  ImGui::StyleColorsDark();
   ImGui::StyleColorsLight();
 
