@@ -121,8 +121,8 @@ int main(int argc, char *argv[])
   log << "GL_VERSION: " << glVerStr();
   log << "GL_SHADING_LANGUAGE_VERSION: " << glShadingLangVerStr();
 
-  //  ImGui::StyleColorsDark();
-  ImGui::StyleColorsLight();
+  ImGui::StyleColorsDark();
+  // ImGui::StyleColorsLight();
 
   const std::string glslVersion = "#version 150";
   ImGui_ImplGlfw_InitForOpenGL(window, true);
@@ -173,7 +173,7 @@ int main(int argc, char *argv[])
   }
 
   // uncomment this call to draw in wireframe polygons.
-//  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
   // --- rendering loop
   while (!glfwWindowShouldClose(window))
@@ -202,7 +202,7 @@ int main(int argc, char *argv[])
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
-//    ImGui::ShowDemoWindow();
+    //ImGui::ShowDemoWindow();
     ImGui::ShowMetricsWindow();
    
     // Render dear imgui into screen

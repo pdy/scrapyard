@@ -1,4 +1,6 @@
 #include "include.h"
+#include "shaders.h"
+
 
 namespace pdy {
 
@@ -41,14 +43,8 @@ std::optional<unsigned int> compileShader(const char *shaderSource, unsigned int
 
 std::optional<Result> createRect(float ndcOrigoX, float ndcOrigoY, float ndcWidth, float ndcHeight, Color color)
 {
-  const std::string vertexShaderSource = R"(#version 330 core
-layout (location = 0) in vec3 aPos;
-void main()
-{
-    gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
-})";
 
-  const auto vertexShader = compileShader(vertexShaderSource.c_str(), GL_VERTEX_SHADER);
+  const auto vertexShader = compileShader(vertexShader_Loc_0.c_str(), GL_VERTEX_SHADER);
   if(!vertexShader)
     return std::nullopt; 
 
@@ -56,19 +52,9 @@ void main()
 
   const std::string fragColorShaderSource = [&]{
     if(color == Color::orange)
-      return R"(#version 330 core
-out vec4 FragColor;
-void main()
-{
-    FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);
-})";
+      return fragColorOrangeShader; 
 
-    return R"(#version 330 core
-out vec4 FragColor;
-void main()
-{ 
-    FragColor = vec4(1.0f, 1.0f, 0.0f, 1.0f);
-})";
+    return fragColorYellowShader; 
   }();
 
 
@@ -137,28 +123,13 @@ void main()
 
 std::optional<Result> createTwoRects()
 {
-  const std::string vertexShaderSource = R"(#version 330 core
-layout (location = 0) in vec3 aPos;
-void main()
-{
-    gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
-})";
-
-  const auto vertexShader = compileShader(vertexShaderSource.c_str(), GL_VERTEX_SHADER);
+  const auto vertexShader = compileShader(vertexShader_Loc_0.c_str(), GL_VERTEX_SHADER);
   if(!vertexShader)
     return std::nullopt; 
 
   log << "[INFO] compiled vertex shader";
 
-  const std::string fragColorShaderSource = R"(#version 330 core
-out vec4 FragColor;
-void main()
-{
-    FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);
-})";
-
-
-  const auto colorShader = compileShader(fragColorShaderSource.c_str(), GL_FRAGMENT_SHADER);
+  const auto colorShader = compileShader(fragColorOrangeShader.c_str(), GL_FRAGMENT_SHADER);
   if(!colorShader)
     return std::nullopt;
     
@@ -241,28 +212,13 @@ void main()
 
 std::optional<Result> createRectangleGLBuffer()
 {
-  const std::string vertexShaderSource = R"(#version 330 core
-layout (location = 0) in vec3 aPos;
-void main()
-{
-    gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
-})";
-
-  const auto vertexShader = compileShader(vertexShaderSource.c_str(), GL_VERTEX_SHADER);
+  const auto vertexShader = compileShader(vertexShader_Loc_0.c_str(), GL_VERTEX_SHADER);
   if(!vertexShader)
     return std::nullopt; 
 
   log << "[INFO] compiled vertex shader";
 
-  const std::string fragColorShaderSource = R"(#version 330 core
-out vec4 FragColor;
-void main()
-{
-    FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);
-})";
-
-
-  const auto colorShader = compileShader(fragColorShaderSource.c_str(), GL_FRAGMENT_SHADER);
+  const auto colorShader = compileShader(fragColorOrangeShader.c_str(), GL_FRAGMENT_SHADER);
   if(!colorShader)
     return std::nullopt;
     
@@ -328,42 +284,19 @@ void main()
 
 std::optional<ResultEx> createTwoTrianglesNextToEachOtherDifferentColors()
 {
-  const std::string vertexShaderSource = R"(#version 330 core
-layout (location = 0) in vec3 aPos;
-void main()
-{
-    gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
-})";
-
-  const auto vertexShader = compileShader(vertexShaderSource.c_str(), GL_VERTEX_SHADER);
+  const auto vertexShader = compileShader(vertexShader_Loc_0.c_str(), GL_VERTEX_SHADER);
   if(!vertexShader)
     return std::nullopt; 
 
   log << "[INFO] compiled vertex shader";
 
-  const std::string fragColorShaderSource = R"(#version 330 core
-out vec4 FragColor;
-void main()
-{
-    FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);
-})";
-
-
-
-  const auto colorShader = compileShader(fragColorShaderSource.c_str(), GL_FRAGMENT_SHADER);
+  const auto colorShader = compileShader(fragColorOrangeShader.c_str(), GL_FRAGMENT_SHADER);
   if(!colorShader)
     return std::nullopt;
     
   log << "[INFO] fragmend color shader";
 
-  const std::string fragColorYelloShaderSource = R"(#version 330 core
-out vec4 FragColor;
-void main()
-{
-    FragColor = vec4(1.0f, 1.0f, 0.0f, 1.0f);
-})";
-
-  const auto colorYellowShader = compileShader(fragColorYelloShaderSource.c_str(), GL_FRAGMENT_SHADER);
+  const auto colorYellowShader = compileShader(fragColorYellowShader.c_str(), GL_FRAGMENT_SHADER);
   if(!colorYellowShader)
     return std::nullopt;
 
@@ -438,28 +371,13 @@ void main()
 
 std::optional<Result> createTwoTrianglesNextToEachOther()
 {
-  const std::string vertexShaderSource = R"(#version 330 core
-layout (location = 0) in vec3 aPos;
-void main()
-{
-    gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
-})";
-
-  const auto vertexShader = compileShader(vertexShaderSource.c_str(), GL_VERTEX_SHADER);
+  const auto vertexShader = compileShader(vertexShader_Loc_0.c_str(), GL_VERTEX_SHADER);
   if(!vertexShader)
     return std::nullopt; 
 
   log << "[INFO] compiled vertex shader";
 
-  const std::string fragColorShaderSource = R"(#version 330 core
-out vec4 FragColor;
-void main()
-{
-    FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);
-})";
-
-
-  const auto colorShader = compileShader(fragColorShaderSource.c_str(), GL_FRAGMENT_SHADER);
+  const auto colorShader = compileShader(fragColorOrangeShader.c_str(), GL_FRAGMENT_SHADER);
   if(!colorShader)
     return std::nullopt;
     
