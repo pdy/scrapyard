@@ -185,7 +185,18 @@ int main(int argc, char *argv[])
 
     //----Render--------------------------
     //************************************************
+ 
+    // feed inputs to dear imgui, start new frame
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+    //ImGui::ShowDemoWindow();
+    ImGui::ShowMetricsWindow();
 
+
+
+    //-----Frame---------------------------
+    //**************************************************************************
     glUseProgram(leftRect->shaderProgram);
     glBindVertexArray(leftRect->VAO);
 //    glDrawArrays(GL_TRIANGLES, 0, twoTriangs->shader1Count);
@@ -197,14 +208,10 @@ int main(int argc, char *argv[])
 
 //    glBindVertexArray(triang_2->VAO);
 //    glDrawArrays(GL_TRIANGLES, twoTriangs->shader1Count, twoTriangs->shader2Count);
-    
-    // feed inputs to dear imgui, start new frame
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
-    ImGui::NewFrame();
-    //ImGui::ShowDemoWindow();
-    ImGui::ShowMetricsWindow();
-   
+
+    //-----End Frame---------------------------
+    //**************************************************************************
+
     // Render dear imgui into screen
     ImGui::Render();
 
