@@ -165,7 +165,7 @@ int main(int argc, char *argv[])
     return -1;
   }
 
-  const auto rightRect = pdy::createRect(0.1f, 0.8f, 0.7f, 0.7f, pdy::Color::yellow);
+  const auto rightRect = pdy::createRect(0.1f, 0.8f, 0.7f, 0.7f, pdy::YELLOW);
   if(!leftRect)
   {
     log << "[ERROR] Failed right rect";

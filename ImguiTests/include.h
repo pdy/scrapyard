@@ -13,6 +13,27 @@
 
 namespace pdy {
 
+struct Color
+{
+  float r{0.0};
+  float g{0.0};
+  float b{0.0};
+  float a{1.0};
+
+  inline bool operator ==(const Color &other) const
+  {
+    constexpr float EPS = 0.001f;
+    const auto eq = [&](float lhs, float rhs) { return std::abs(lhs - rhs) <= EPS; };
+
+    return eq(r, other.r) && eq(g, other.g) && eq(b, other.b) && eq(a, other.a);
+  }
+
+  inline bool operator !=(const Color &other) const { return !(*this == other); }
+};
+
+static const auto YELLOW = Color{1.0f, 1.0f, 0.0f};
+static const auto ORANGE = Color{1.0f, 0.5f, 0.2f};
+
 inline void frameBufferSizeCallback(GLFWwindow* /*window*/, int width, int height)
 {
   glViewport(0, 0, width, height);
@@ -121,8 +142,7 @@ struct ResultEx
   unsigned int shader2Count;
 };
 
-enum class Color{orange, yellow};
-std::optional<Result> createRect(float ndcOrigoX, float ndcOrigoY, float ndcWidth, float ndcHeight, Color color = Color::orange);
+std::optional<Result> createRect(float ndcOrigoX, float ndcOrigoY, float ndcWidth, float ndcHeight, Color color = ORANGE);
 
 std::optional<Result> createRectangleGLBuffer();
 std::optional<Result> createTwoRects();

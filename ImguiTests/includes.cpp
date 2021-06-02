@@ -51,7 +51,7 @@ std::optional<Result> createRect(float ndcOrigoX, float ndcOrigoY, float ndcWidt
   log << "[INFO] compiled vertex shader";
 
   const std::string fragColorShaderSource = [&]{
-    if(color == Color::orange)
+    if(color == pdy::ORANGE)
       return fragColorOrangeShader; 
 
     return fragColorYellowShader; 
