@@ -6,7 +6,7 @@
 
 #define KEY_BYTE_SIZE 8 
 
-// static const char *HEX_STR_CHARS = "0123456789AaBbCcDdEeFf";
+static const char HEX_STR_CHARS[] = "0123456789AaBbCcDdEeFf";
 
 static void usage(void)
 {
@@ -55,6 +55,28 @@ static void print_as_hexstr(uint8_t *buffer, size_t size)
     printf("%2x ", buffer[i]);
 
   printf("\n");
+}
+
+static int is_valid_hex_str(const char * const buffer, size_t size)
+{
+  int is_in = 0;
+  for(size_t i = 0; i < size && buffer[i]; ++i)
+  {
+    is_in = 0;
+    for(size_t j = 0; j < sizeof(HEX_STR_CHARS); ++j)
+    {
+      if(buffer[i] == HEX_STR_CHARS[j])
+      {
+        is_in = 1;
+        break;
+      }
+    }
+
+    if(!is_in)
+      break;
+  }
+
+  return is_in;
 }
 
 static uint8_t hex_char_map(char chr)
@@ -157,6 +179,12 @@ int main(int argc, char **argv)
   if(key_file_size != KEY_BYTE_SIZE * 2 + 1)
   {
     printf("key file size is required to be hex string consisting 16 character\n");
+    goto end;
+  }
+
+  if(!is_valid_hex_str(key_file_buffer, key_file_size - 1))
+  {
+    printf("%s does not contain valid hex str\n", argv[1]);
     goto end;
   }
 
