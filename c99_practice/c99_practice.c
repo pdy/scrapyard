@@ -4,7 +4,8 @@
 #include <ctype.h>
 #include <assert.h>
 
-#define KEY_BYTE_SIZE 8 
+#define KEY_SIZE 8 
+#define KEY_PC1_SIZE 7 
 
 static const char HEX_STR_CHARS[] = "0123456789AaBbCcDdEeFf";
 
@@ -43,7 +44,7 @@ static unsigned long read_file(const char * const filename, char **ret)
 
 static void print_buffer(const char * const buffer, unsigned long size)
 {
-  for(unsigned long i = 0; i < size && buffer[i]; ++i)
+  for(unsigned long i = 0; i < size; ++i)
    printf("%c", buffer[i]);
 
   printf("\n"); 
@@ -60,7 +61,7 @@ static void print_as_hexstr(uint8_t *buffer, size_t size)
 static int is_valid_hex_str(const char * const buffer, size_t size)
 {
   int is_in = 0;
-  for(size_t i = 0; i < size && buffer[i]; ++i)
+  for(size_t i = 0; i < size; ++i)
   {
     is_in = 0;
     for(size_t j = 0; j < sizeof(HEX_STR_CHARS); ++j)
@@ -136,27 +137,78 @@ static void to_lower(char *buffer, size_t size)
     buffer[i] = (char)tolower((int)buffer[i]);
 }
 
-static void print_bin(const uint8_t * const buffer, size_t size)
+static void print_bin(const uint8_t * const buffer, size_t size, size_t bit_word_len)
 {
-  char str[9] = {0};
-  str[8] = '\0';
-  for(size_t i = 0; i < size && buffer[i]; ++i)
+  const size_t str_len = size * 8 * sizeof(char);
+  char *str = (char*)malloc(str_len);
+  for(size_t i = 0; i < size; ++i)
   {
     const uint8_t bt = buffer[i];
+    const size_t idx = i * 8;
 
-    str[0] = bt & 0x80 ? '1' : '0';
-    str[1] = bt & 0x40 ? '1' : '0';
-    str[2] = bt & 0x20 ? '1' : '0';
-    str[3] = bt & 0x10 ? '1' : '0';
-    str[4] = bt & 0x08 ? '1' : '0';
-    str[5] = bt & 0x04 ? '1' : '0';
-    str[6] = bt & 0x02 ? '1' : '0';
-    str[7] = bt & 0x01 ? '1' : '0';
-
-    printf("%s ", str);
+    str[idx + 0] = bt & 0x80 ? '1' : '0';
+    str[idx + 1] = bt & 0x40 ? '1' : '0';
+    str[idx + 2] = bt & 0x20 ? '1' : '0';
+    str[idx + 3] = bt & 0x10 ? '1' : '0';
+    str[idx + 4] = bt & 0x08 ? '1' : '0';
+    str[idx + 5] = bt & 0x04 ? '1' : '0';
+    str[idx + 6] = bt & 0x02 ? '1' : '0';
+    str[idx + 7] = bt & 0x01 ? '1' : '0'; 
   }
 
+  for(size_t i = 0; i < str_len; ++i)
+  {
+    if(i % bit_word_len == 0 && i != 0)
+      printf(" ");
+    
+    printf("%c", str[i]);
+  }
+
+  free(str);
   printf("\n"); 
+}
+
+static void print_bin_with_title(const char *title, const uint8_t * const buffer, size_t size, size_t bit_word_len)
+{
+  printf("%s ", title);
+  print_bin(buffer, size, bit_word_len);
+}
+
+static void key_pc1(const uint8_t * const buffer, uint8_t *ret)
+{
+
+  ret[0] |= buffer[57 / 8]      & 0x80;
+  ret[0] |= buffer[49 / 8] >> 1 & 0x40;
+  ret[0] |= buffer[41 / 8] >> 2 & 0x20;
+  ret[0] |= buffer[33 / 8] >> 3 & 0x10;
+  ret[0] |= buffer[25 / 8] >> 4 & 0x08;
+  ret[0] |= buffer[17 / 8] >> 5 & 0x04;
+  ret[0] |= buffer[9  / 8] >> 6 & 0x02;
+ 
+  ret[0] |= buffer[1  / 8]      & 0x80;
+  ret[1] |= buffer[58 / 8]      & 0x40;
+  ret[1] |= buffer[50 / 8] >> 1 & 0x20;
+  ret[1] |= buffer[42 / 8] >> 2 & 0x10;
+  ret[1] |= buffer[34 / 8] >> 3 & 0x08;
+  ret[1] |= buffer[26 / 8] >> 4 & 0x04;
+  ret[1] |= buffer[18 / 8] >> 5 & 0x02;
+
+  ret[1] |= buffer[10 / 8] << 2 & 0x80;
+  ret[1] |= buffer[2  / 8]      & 0x40;
+
+/*
+  
+  ret[0] |= buffer[56 / 8]      & 0x80;
+  ret[0] |= buffer[48 / 8] >> 1 & 0x40;
+  ret[0] |= buffer[40 / 8] >> 2 & 0x20;
+  ret[0] |= buffer[32 / 8] >> 3 & 0x10;
+  ret[0] |= buffer[24 / 8] >> 4 & 0x08;
+  ret[0] |= buffer[16 / 8] >> 5 & 0x04;
+  ret[0] |= buffer[8  / 8] >> 6 & 0x02;
+*/
+
+  
+
 }
 
 int main(int argc, char **argv)
@@ -176,7 +228,7 @@ int main(int argc, char **argv)
   }
 
   // times 2 cause hex string +1 cause line feed
-  if(key_file_size != KEY_BYTE_SIZE * 2 + 1)
+  if(key_file_size != KEY_SIZE * 2 + 1)
   {
     printf("key file size is required to be hex string consisting 16 character\n");
     goto end;
@@ -189,13 +241,17 @@ int main(int argc, char **argv)
   }
 
   to_lower(key_file_buffer, key_file_size - 1);
-  print_buffer(key_file_buffer, key_file_size);
+  //print_buffer(key_file_buffer, key_file_size);
 
-  uint8_t key_bytes[KEY_BYTE_SIZE] = {0};
+  uint8_t key_bytes[KEY_SIZE] = {0};
   hex_str_to_bytes(key_file_buffer, key_file_size - 1, key_bytes);
 
-  print_as_hexstr(key_bytes, sizeof key_bytes);
-  print_bin(key_bytes, sizeof key_bytes);
+  //print_as_hexstr(key_bytes, sizeof key_bytes);
+  print_bin_with_title("K =", key_bytes, KEY_SIZE, 8);
+
+  uint8_t key_pc1_bytes[KEY_PC1_SIZE] = {0};//{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+  key_pc1(key_bytes, key_pc1_bytes);
+  print_bin_with_title("K+ =", key_pc1_bytes, KEY_PC1_SIZE, 7);
     
 end:
   if(key_file_buffer)
