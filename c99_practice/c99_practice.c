@@ -310,6 +310,12 @@ static void key_pc2(const uint8_t * const buffer, uint8_t *ret)
   ret[2] |= buffer[3 /*26*/] << 1 & 0x80;
   ret[2] |= buffer[0 /*8 */] << 6 & 0x40;
 
+  ret[2] |= buffer[1 /*16*/] << 5 & 0x20;
+  ret[2] |= buffer[0 /*7 */] << 3 & 0x10;
+  ret[2] |= buffer[3 /*27*/] >> 2 & 0x08;
+  ret[2] |= buffer[2 /*20*/] >> 2 & 0x04;
+  ret[2] |= buffer[1 /*13*/] >> 2 & 0x02;
+  ret[2] |= buffer[0 /*2 */] >> 6 & 0x01;
 
 }
 
