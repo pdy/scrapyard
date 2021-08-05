@@ -96,11 +96,17 @@ static uint8_t hex_char_map(char chr)
     case '8': return 8;
     case '9': return 9;
     case 'a': return 10;
+    case 'A': return 10;
     case 'b': return 11;
+    case 'B': return 11;
     case 'c': return 12;
+    case 'C': return 12;
     case 'd': return 13;
+    case 'D': return 13;
     case 'e': return 14;
+    case 'E': return 14;
     case 'f': return 15;
+    case 'F': return 15;
   }
 
   return 0;
@@ -132,11 +138,13 @@ static void hex_str_to_bytes(const char * const buffer, unsigned long size, uint
   }
 }
 
+/*
 static void to_lower(char *buffer, size_t size)
 {
   for(size_t i = 0; i < size && buffer[i]; ++i)
     buffer[i] = (char)tolower((int)buffer[i]);
 }
+*/
 
 static void print_bin(const uint8_t * const buffer, size_t size, size_t bit_word_len)
 {
@@ -287,7 +295,6 @@ int main(int argc, char **argv)
     goto end;
   }
 
-  to_lower(key_file_buffer, KEY_HEXSTR_LEN);
   //print_buffer(key_file_buffer, key_file_size);
 
   uint8_t key_bytes[KEY_SIZE] = {0};
