@@ -292,12 +292,25 @@ static void key_pc2(const uint8_t * const buffer, uint8_t *ret)
   ret[0] |= buffer[1 /*14*/] << 5 & 0x80;
   ret[0] |= buffer[2 /*17*/] >> 1 & 0x40;
   ret[0] |= buffer[1 /*11*/]      & 0x20;
-  
-//  print_bin_with_title("buffer", buffer + (24/8), 1, 8, 0);
   ret[0] |= buffer[2 /*24*/] << 4 & 0x10;
   ret[0] |= buffer[0 /*1*/ ] >> 4 & 0x08;
   ret[0] |= buffer[0 /*5*/ ] >> 1 & 0x04;
-    
+
+  ret[0] |= buffer[0 /*3*/ ] >> 4 & 0x02;
+  ret[0] |= buffer[3 /*28*/] >> 4 & 0x01;
+  ret[1] |= buffer[1 /*15*/] << 6 & 0x80;
+  ret[1] |= buffer[0 /*6 */] << 4 & 0x40;
+  ret[1] |= buffer[2 /*21*/] << 2 & 0x20;
+  ret[1] |= buffer[1 /*10*/] >> 2 & 0x10;
+
+  ret[1] |= buffer[2 /*23*/] << 2 & 0x08;
+  ret[1] |= buffer[2 /*19*/] >> 3 & 0x04;
+  ret[1] |= buffer[1 /*12*/] >> 3 & 0x02;
+  ret[1] |= buffer[0 /*4 */] >> 4 & 0x01;
+  ret[2] |= buffer[3 /*26*/] << 1 & 0x80;
+  ret[2] |= buffer[0 /*8 */] << 6 & 0x40;
+
+
 }
 
 void static shift_left_cd_mv_bit(uint8_t *buffer, size_t size)
