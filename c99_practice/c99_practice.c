@@ -140,14 +140,6 @@ static void hex_str_to_bytes(const char * const buffer, unsigned long size, uint
   }
 }
 
-/*
-static void to_lower(char *buffer, size_t size)
-{
-  for(size_t i = 0; i < size && buffer[i]; ++i)
-    buffer[i] = (char)tolower((int)buffer[i]);
-}
-*/
-
 static void print_bin(const uint8_t * const buffer, size_t size, size_t bit_word_len, size_t skip_beg)
 {
   // this would have been much simpler if I wouldn't need to print 7 bit bytes from time to time
