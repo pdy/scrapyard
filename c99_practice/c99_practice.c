@@ -239,9 +239,22 @@ static void key_pc1(const uint8_t * const buffer, uint8_t *ret)
   ret[5] |= buffer[30 / 8] << 5 & 0x80;
   ret[5] |= buffer[22 / 8] << 4 & 0x40;
 
+  ret[5] |= buffer[14 / 8] << 3 & 0x20;
+  ret[5] |= buffer[6  / 8] << 2 & 0x10;
+  ret[5] |= buffer[61 / 8]      & 0x08;
+  ret[5] |= buffer[53 / 8] >> 1 & 0x04;
+  ret[5] |= buffer[45 / 8] >> 2 & 0x02;
+  ret[5] |= buffer[37 / 8] >> 3 & 0x01;
+  ret[6] |= buffer[29 / 8] << 4 & 0x80;
 
+  ret[6] |= buffer[21 / 8] << 3 & 0x40;
+  ret[6] |= buffer[13 / 8] << 2 & 0x20;
+  ret[6] |= buffer[5  / 8] << 1 & 0x10;
+  ret[6] |= buffer[28 / 8] >> 1 & 0x08;
+  ret[6] |= buffer[20 / 8] >> 2 & 0x04;
+  ret[6] |= buffer[12 / 8] >> 3 & 0x02;
+  ret[6] |= buffer[4  / 8] >> 4 & 0x01;
 }
-
 int main(int argc, char **argv)
 {
   if(argc != 3)
