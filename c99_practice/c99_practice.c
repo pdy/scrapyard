@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <assert.h>
+#include <string.h>
 
 #define KEY_SIZE 8 
 #define KEY_PC1_SIZE 7 
@@ -146,7 +147,7 @@ static void to_lower(char *buffer, size_t size)
 }
 */
 
-static void print_bin(const uint8_t * const buffer, size_t size, size_t bit_word_len)
+static void print_bin(const uint8_t * const buffer, size_t size, size_t bit_word_len, size_t skip_beg)
 {
   // this would have been much simpler if I wouldn't need to print 7 bit bytes from time to time
 
@@ -167,22 +168,27 @@ static void print_bin(const uint8_t * const buffer, size_t size, size_t bit_word
     str[idx + 7] = bt & 0x01 ? '1' : '0'; 
   }
 
+  size_t cnt = 0;
   for(size_t i = 0; i < str_len; ++i)
   {
-    if(i % bit_word_len == 0 && i != 0)
+    if(i < skip_beg)
+      continue;
+
+    if(cnt % bit_word_len == 0 && cnt != 0)
       printf(" ");
     
     printf("%c", str[i]);
+    ++cnt;
   }
 
   free(str);
   printf("\n"); 
 }
 
-static void print_bin_with_title(const char *title, const uint8_t * const buffer, size_t size, size_t bit_word_len)
+static void print_bin_with_title(const char *title, const uint8_t * const buffer, size_t size, size_t bit_word_len, size_t skip_beg)
 {
   printf("%s ", title);
-  print_bin(buffer, size, bit_word_len);
+  print_bin(buffer, size, bit_word_len, skip_beg);
 }
 
 static void key_pc1(const uint8_t * const buffer, uint8_t *ret)
@@ -266,6 +272,88 @@ static void key_pc1(const uint8_t * const buffer, uint8_t *ret)
   ret[6] |= buffer[12 / 8] >> 3 & 0x02;
   ret[6] |= buffer[4  / 8] >> 4 & 0x01;
 }
+
+void static shift_left_cd_mv_bit(uint8_t *buffer, size_t size)
+{
+  const uint8_t last_bit = buffer[0] >> 3 & 0x01;
+
+  uint8_t add_bit  = 0x00;
+  for(size_t i = size; i > 0; --i)
+  {
+    const size_t idx = i-1;
+    const uint8_t org = buffer[idx];
+    buffer[idx] = (uint8_t)(buffer[idx] << 1) | add_bit;
+
+    if(org & 0x80)
+      add_bit = 0x01;
+    else
+      add_bit = 0x00;
+  }
+
+  buffer[0] &= 0x0f;
+  buffer[size - 1] |= last_bit; 
+}
+
+static void key_rotation(const uint8_t * const key_pc1_buffer, size_t iteration, uint8_t *ret)
+{
+  assert(iteration >= 0 && iteration <= 16);
+
+  // static const size_t SHIFTS[16] = {1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1};
+
+//  const uint8_t *C0 = key_pc1_buffer;
+//  const uint8_t *D0 = key_pc1_buffer + 28;
+
+  uint8_t c_i[4] = 
+  {
+    ((key_pc1_buffer[0] & 0xf0) >> 4),
+    (uint8_t)((key_pc1_buffer[0] & 0x0f) << 4) | ((key_pc1_buffer[1] & 0xf0) >> 4),
+    (uint8_t)((key_pc1_buffer[1] & 0x0f) << 4) | ((key_pc1_buffer[2] & 0xf0) >> 4),
+    (uint8_t)((key_pc1_buffer[2] & 0x0f) << 4) | ((key_pc1_buffer[3] & 0xf0) >> 4)
+  };
+
+  uint8_t d_i[4] =
+  {
+    (key_pc1_buffer[3] & 0x0f ),
+    key_pc1_buffer[4],
+    key_pc1_buffer[5],
+    key_pc1_buffer[6] 
+  };
+
+  print_bin_with_title("C0 =", c_i, 4, 7, 4);
+  print_bin_with_title("D0 =", d_i, 4, 7, 4);
+
+  char title_str[10 + 1] = {0};
+  for(size_t i = 1; i <= iteration; ++i)
+  {
+    if(i == 1 || i == 2 || i == 9 || i == 16)
+    {
+      // single shift
+      shift_left_cd_mv_bit(c_i, 4);
+      shift_left_cd_mv_bit(d_i, 4);
+
+    }
+    else
+    {
+      // double shift
+      shift_left_cd_mv_bit(c_i, 4);
+      shift_left_cd_mv_bit(c_i, 4);
+
+      shift_left_cd_mv_bit(d_i, 4);
+      shift_left_cd_mv_bit(d_i, 4);
+    }
+
+    sprintf(title_str, "C%lu =", i);
+    print_bin_with_title(title_str, c_i, 4, 7, 4);
+    
+    memset(title_str, 0x00, sizeof title_str);
+
+    sprintf(title_str, "D%lu =", i);
+    print_bin_with_title(title_str, d_i, 4, 7, 4);
+    memset(title_str, 0x00, sizeof title_str);
+  }
+
+}
+
 int main(int argc, char **argv)
 {
   if(argc != 3)
@@ -301,12 +389,14 @@ int main(int argc, char **argv)
   hex_str_to_bytes(key_file_buffer, KEY_HEXSTR_LEN, key_bytes);
 
   //print_as_hexstr(key_bytes, sizeof key_bytes);
-  print_bin_with_title("K =", key_bytes, KEY_SIZE, 8);
+  print_bin_with_title("K =", key_bytes, KEY_SIZE, 8, 0);
 
-  uint8_t key_pc1_bytes[KEY_PC1_SIZE] = {0};//{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+  uint8_t key_pc1_bytes[KEY_PC1_SIZE] = {0};
   key_pc1(key_bytes, key_pc1_bytes);
-  print_bin_with_title("K+ =", key_pc1_bytes, KEY_PC1_SIZE, 7);
-    
+  print_bin_with_title("K+ =", key_pc1_bytes, KEY_PC1_SIZE, 7, 0);
+
+  key_rotation(key_pc1_bytes, 1, NULL);
+
 end:
   if(key_file_buffer)
     free(key_file_buffer);
