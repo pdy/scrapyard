@@ -6,7 +6,8 @@
 #include <string.h>
 
 #define KEY_SIZE 8 
-#define KEY_PC1_SIZE 7 
+#define KEY_PC1_SIZE 7
+#define KEY_PC2_SIZE 6
 #define KEY_HEXSTR_LEN (KEY_SIZE * 2)
 
 static const char HEX_STR_CHARS[] = "0123456789AaBbCcDdEeFf";
@@ -195,12 +196,12 @@ static void key_pc1(const uint8_t * const buffer, uint8_t *ret)
 {
   /*
    *
-   * 57   49    41   33    25    17    9
-     1    58    50   42    34    26   18
+     57   49    41   33    25    17    9
+      1   58    50   42    34    26   18
      10    2    59   51    43    35   27
      19   11     3   60    52    44   36
      63   55    47   39    31    23   15
-     7    62    54   46    38    30   22
+      7   62    54   46    38    30   22
      14    6    61   53    45    37   29
      21   13     5   28    20    12    4
    *
@@ -273,6 +274,32 @@ static void key_pc1(const uint8_t * const buffer, uint8_t *ret)
   ret[6] |= buffer[4  / 8] >> 4 & 0x01;
 }
 
+static void key_pc2(const uint8_t * const buffer, uint8_t *ret)
+{
+  /*
+   *
+      14    17   11    24     1    5
+       3    28   15     6    21   10
+      23    19   12     4    26    8
+      16     7   27    20    13    2
+      41    52   31    37    47   55
+      30    40   51    45    33   48
+      44    49   39    56    34   53
+      46    42   50    36    29   32
+   *
+   */
+  
+  ret[0] |= buffer[1 /*14*/] << 5 & 0x80;
+  ret[0] |= buffer[2 /*17*/] >> 1 & 0x40;
+  ret[0] |= buffer[1 /*11*/]      & 0x20;
+  
+//  print_bin_with_title("buffer", buffer + (24/8), 1, 8, 0);
+  ret[0] |= buffer[2 /*24*/] << 4 & 0x10;
+  ret[0] |= buffer[0 /*1*/ ] >> 4 & 0x08;
+  ret[0] |= buffer[0 /*5*/ ] >> 1 & 0x04;
+    
+}
+
 void static shift_left_cd_mv_bit(uint8_t *buffer, size_t size)
 {
   const uint8_t last_bit = buffer[0] >> 3 & 0x01;
@@ -297,11 +324,6 @@ void static shift_left_cd_mv_bit(uint8_t *buffer, size_t size)
 static void key_rotation(const uint8_t * const key_pc1_buffer, size_t iteration, uint8_t *ret)
 {
   assert(iteration >= 0 && iteration <= 16);
-
-  // static const size_t SHIFTS[16] = {1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1};
-
-//  const uint8_t *C0 = key_pc1_buffer;
-//  const uint8_t *D0 = key_pc1_buffer + 28;
 
   uint8_t c_i[4] = 
   {
@@ -343,15 +365,39 @@ static void key_rotation(const uint8_t * const key_pc1_buffer, size_t iteration,
     }
 
     sprintf(title_str, "C%lu =", i);
-    print_bin_with_title(title_str, c_i, 4, 7, 4);
+    print_bin_with_title(title_str, c_i, 4, 28, 4);
     
     memset(title_str, 0x00, sizeof title_str);
 
     sprintf(title_str, "D%lu =", i);
-    print_bin_with_title(title_str, d_i, 4, 7, 4);
+    print_bin_with_title(title_str, d_i, 4, 28, 4);
     memset(title_str, 0x00, sizeof title_str);
   }
 
+  // purposely at the end cause sometimes I just want to print
+//  if(!ret)
+//    return;
+
+  const uint8_t cd[7] =
+  {
+    (uint8_t)((c_i[0] & 0x0f) << 4 | (c_i[1] & 0xf0) >> 4),
+    (uint8_t)((c_i[1] & 0x0f) << 4 | (c_i[2] & 0xf0) >> 4),
+    (uint8_t)((c_i[2] & 0x0f) << 4 | (c_i[3] & 0xf0) >> 4),
+
+    (uint8_t)((c_i[3] & 0x0f) << 4 | (d_i[0])),
+    d_i[1],
+    d_i[2],
+    d_i[3]
+  }; 
+  
+  print_bin_with_title("CD =", cd, 7, 7, 0); 
+  
+  uint8_t K_pc2[KEY_PC2_SIZE] = {0};
+  key_pc2(cd, K_pc2);
+  
+  sprintf(title_str, "K%lu =", iteration);
+  print_bin_with_title(title_str, K_pc2, KEY_PC2_SIZE, 6, 0);
+  memset(title_str, 0x00, sizeof title_str);
 }
 
 int main(int argc, char **argv)
