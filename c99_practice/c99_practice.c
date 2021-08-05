@@ -185,29 +185,46 @@ static void key_pc1(const uint8_t * const buffer, uint8_t *ret)
   ret[0] |= buffer[17 / 8] >> 5 & 0x04;
   ret[0] |= buffer[9  / 8] >> 6 & 0x02;
  
-  ret[0] |= buffer[1  / 8]      & 0x80;
-  ret[1] |= buffer[58 / 8]      & 0x40;
-  ret[1] |= buffer[50 / 8] >> 1 & 0x20;
-  ret[1] |= buffer[42 / 8] >> 2 & 0x10;
-  ret[1] |= buffer[34 / 8] >> 3 & 0x08;
-  ret[1] |= buffer[26 / 8] >> 4 & 0x04;
-  ret[1] |= buffer[18 / 8] >> 5 & 0x02;
+  ret[0] |= buffer[1  / 8] >> 7 & 0x01;
+  ret[1] |= buffer[58 / 8] << 2 & 0x80;
+  ret[1] |= buffer[50 / 8]      & 0x40;
+  ret[1] |= buffer[42 / 8] >> 1 & 0x20;
+  ret[1] |= buffer[34 / 8] >> 2 & 0x10;
+  ret[1] |= buffer[26 / 8] >> 3 & 0x08;
+  ret[1] |= buffer[18 / 8] >> 4 & 0x04;
 
-  ret[1] |= buffer[10 / 8] << 2 & 0x80;
-  ret[1] |= buffer[2  / 8]      & 0x40;
+  ret[1] |= buffer[10 / 8] >> 5 & 0x02;
+  ret[1] |= buffer[2  / 8] >> 6 & 0x01;
+  ret[2] |= buffer[59 / 8] << 1 & 0x80;
+  ret[2] |= buffer[51 / 8] << 1 & 0x40;
+  ret[2] |= buffer[43 / 8]      & 0x20;
+  ret[2] |= buffer[35 / 8] >> 1 & 0x10;
+  ret[2] |= buffer[27 / 8] >> 2 & 0x08;
 
-/*
-  
-  ret[0] |= buffer[56 / 8]      & 0x80;
-  ret[0] |= buffer[48 / 8] >> 1 & 0x40;
-  ret[0] |= buffer[40 / 8] >> 2 & 0x20;
-  ret[0] |= buffer[32 / 8] >> 3 & 0x10;
-  ret[0] |= buffer[24 / 8] >> 4 & 0x08;
-  ret[0] |= buffer[16 / 8] >> 5 & 0x04;
-  ret[0] |= buffer[8  / 8] >> 6 & 0x02;
-*/
+  ret[2] |= buffer[19 / 8] >> 3 & 0x04;
+  ret[2] |= buffer[11 / 8] >> 4 & 0x02;
+  ret[2] |= buffer[3  / 8] >> 5 & 0x01;
+  ret[3] |= buffer[60 / 8] << 3 & 0x80;
+  ret[3] |= buffer[52 / 8] << 2 & 0x40;
+  ret[3] |= buffer[44 / 8] << 1 & 0x20;
+  ret[3] |= buffer[36 / 8]      & 0x10;
 
-  
+  ret[3] |= buffer[63 / 8] << 2 & 0x08;
+  ret[3] |= buffer[55 / 8] << 1 & 0x04;
+  ret[3] |= buffer[47 / 8]      & 0x02;
+  ret[3] |= buffer[39 / 8] >> 1 & 0x01;
+  ret[4] |= buffer[31 / 8] << 6 & 0x80;
+  ret[4] |= buffer[23 / 8] << 5 & 0x40;
+  ret[4] |= buffer[15 / 8] << 4 & 0x20;
+
+  ret[4] |= buffer[7  / 8] << 3 & 0x10;
+  ret[4] |= buffer[62 / 8] << 1 & 0x08;
+  ret[4] |= buffer[54 / 8]      & 0x04;
+  ret[4] |= buffer[46 / 8] >> 1 & 0x02;
+  ret[4] |= buffer[38 / 8] >> 2 & 0x01;
+  ret[5] |= buffer[30 / 8] << 5 & 0x80;
+  ret[5] |= buffer[22 / 8] << 4 & 0x40;
+
 
 }
 
