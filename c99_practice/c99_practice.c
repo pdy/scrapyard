@@ -385,10 +385,6 @@ static void key_rotation(const uint8_t * const key_pc1_buffer, size_t iteration,
     memset(title_str, 0x00, sizeof title_str);
   }
 
-  // purposely at the end cause sometimes I just want to print
-//  if(!ret)
-//    return;
-
   const uint8_t cd[7] =
   {
     (uint8_t)((c_i[0] & 0x0f) << 4 | (c_i[1] & 0xf0) >> 4),
