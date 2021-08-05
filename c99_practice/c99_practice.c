@@ -6,6 +6,7 @@
 
 #define KEY_SIZE 8 
 #define KEY_PC1_SIZE 7 
+#define KEY_HEXSTR_LEN (KEY_SIZE * 2)
 
 static const char HEX_STR_CHARS[] = "0123456789AaBbCcDdEeFf";
 
@@ -25,7 +26,7 @@ static long get_file_size(FILE *file)
 
 static unsigned long read_file(const char * const filename, char **ret)
 {
-  FILE *file = fopen(filename, "rb");
+  FILE *file = fopen(filename, "r");
   if(!file)
     return 0;
 
@@ -35,7 +36,7 @@ static unsigned long read_file(const char * const filename, char **ret)
     return 0;
 
   const unsigned long actual_size = fread(*ret, 1, (unsigned long)file_size, file);
-  printf("%s size %lu \n", filename, actual_size); 
+  printf("%s read size %lu buff size %lu\n", filename, actual_size, file_size); 
   fclose(file);
 
 //  ret = buffer;
@@ -139,6 +140,8 @@ static void to_lower(char *buffer, size_t size)
 
 static void print_bin(const uint8_t * const buffer, size_t size, size_t bit_word_len)
 {
+  // this would have been much simpler if I wouldn't need to print 7 bit bytes from time to time
+
   const size_t str_len = size * 8 * sizeof(char);
   char *str = (char*)malloc(str_len);
   for(size_t i = 0; i < size; ++i)
@@ -271,24 +274,24 @@ int main(int argc, char **argv)
     goto end;
   }
 
-  // times 2 cause hex string +1 cause line feed
-  if(key_file_size != KEY_SIZE * 2 + 1)
+  // ------------------------------  + 1 cause line feed
+  if(key_file_size != KEY_HEXSTR_LEN + 1)
   {
     printf("key file size is required to be hex string consisting 16 character\n");
     goto end;
   }
 
-  if(!is_valid_hex_str(key_file_buffer, key_file_size - 1))
+  if(!is_valid_hex_str(key_file_buffer, KEY_HEXSTR_LEN))
   {
     printf("%s does not contain valid hex str\n", argv[1]);
     goto end;
   }
 
-  to_lower(key_file_buffer, key_file_size - 1);
+  to_lower(key_file_buffer, KEY_HEXSTR_LEN);
   //print_buffer(key_file_buffer, key_file_size);
 
   uint8_t key_bytes[KEY_SIZE] = {0};
-  hex_str_to_bytes(key_file_buffer, key_file_size - 1, key_bytes);
+  hex_str_to_bytes(key_file_buffer, KEY_HEXSTR_LEN, key_bytes);
 
   //print_as_hexstr(key_bytes, sizeof key_bytes);
   print_bin_with_title("K =", key_bytes, KEY_SIZE, 8);
