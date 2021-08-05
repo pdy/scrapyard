@@ -176,6 +176,20 @@ static void print_bin_with_title(const char *title, const uint8_t * const buffer
 
 static void key_pc1(const uint8_t * const buffer, uint8_t *ret)
 {
+  /*
+   *
+   * 57   49    41   33    25    17    9
+     1    58    50   42    34    26   18
+     10    2    59   51    43    35   27
+     19   11     3   60    52    44   36
+     63   55    47   39    31    23   15
+     7    62    54   46    38    30   22
+     14    6    61   53    45    37   29
+     21   13     5   28    20    12    4
+   *
+   */
+  // division is not needed but it's a little bit more clear for me whats going on
+  // it's "hello world" program anyway
 
   ret[0] |= buffer[57 / 8]      & 0x80;
   ret[0] |= buffer[49 / 8] >> 1 & 0x40;
