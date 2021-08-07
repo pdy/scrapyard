@@ -10,11 +10,72 @@
 #define KEY_PC2_SIZE 6
 #define KEY_HEXSTR_LEN (KEY_SIZE * 2)
 
+#define LOG_DETAILES
+
 static const char HEX_STR_CHARS[] = "0123456789AaBbCcDdEeFf";
 
 static void usage(void)
 {
   printf("c99_practice <file_with_hex_str_key> <binary_file>\n");
+}
+
+static void print_bin_detail(const uint8_t * const buffer, size_t size, size_t bit_word_len, size_t skip_beg)
+{
+  // this would have been much simpler if I wouldn't need to print various bit word bytes from time to time
+
+  const size_t str_len = size * 8 * sizeof(char);
+  char *str = (char*)malloc(str_len);
+  for(size_t i = 0; i < size; ++i)
+  {
+    const uint8_t bt = buffer[i];
+    const size_t idx = i * 8;
+
+    str[idx + 0] = bt & 0x80 ? '1' : '0';
+    str[idx + 1] = bt & 0x40 ? '1' : '0';
+    str[idx + 2] = bt & 0x20 ? '1' : '0';
+    str[idx + 3] = bt & 0x10 ? '1' : '0';
+    str[idx + 4] = bt & 0x08 ? '1' : '0';
+    str[idx + 5] = bt & 0x04 ? '1' : '0';
+    str[idx + 6] = bt & 0x02 ? '1' : '0';
+    str[idx + 7] = bt & 0x01 ? '1' : '0'; 
+  }
+
+  size_t cnt = 0;
+  for(size_t i = 0; i < str_len; ++i)
+  {
+    if(i < skip_beg)
+      continue;
+
+    if(cnt % bit_word_len == 0 && cnt != 0)
+      printf(" ");
+    
+    printf("%c", str[i]);
+    ++cnt;
+  }
+  
+  free(str);
+  printf("\n"); 
+}
+
+static void print_bin_with_title(const char *title, const uint8_t * const buffer, size_t size, size_t bit_word_len, size_t skip_beg)
+{
+  printf("%s ", title);
+  print_bin_detail(buffer, size, bit_word_len, skip_beg);
+}
+
+static void print_bin_simple(const char *title, const uint8_t * const buffer, size_t size)
+{
+  print_bin_with_title(title, buffer, size, size * 8, 0);
+}
+
+static void print_bin_bits(const char *title, const uint8_t * const buffer, size_t size, size_t bit_word_len)
+{
+  print_bin_with_title(title, buffer, size, 8, 0);
+}
+
+static void print_bin_8bit(const char *title, const uint8_t * const buffer, size_t size)
+{
+  print_bin_bits(title, buffer, size, 8);
 }
 
 static long get_file_size(FILE *file)
@@ -138,50 +199,6 @@ static void hex_str_to_bytes(const char * const buffer, unsigned long size, uint
 
     byteTbCnt += 1;
   }
-}
-
-static void print_bin(const uint8_t * const buffer, size_t size, size_t bit_word_len, size_t skip_beg)
-{
-  // this would have been much simpler if I wouldn't need to print 7 bit bytes from time to time
-
-  const size_t str_len = size * 8 * sizeof(char);
-  char *str = (char*)malloc(str_len);
-  for(size_t i = 0; i < size; ++i)
-  {
-    const uint8_t bt = buffer[i];
-    const size_t idx = i * 8;
-
-    str[idx + 0] = bt & 0x80 ? '1' : '0';
-    str[idx + 1] = bt & 0x40 ? '1' : '0';
-    str[idx + 2] = bt & 0x20 ? '1' : '0';
-    str[idx + 3] = bt & 0x10 ? '1' : '0';
-    str[idx + 4] = bt & 0x08 ? '1' : '0';
-    str[idx + 5] = bt & 0x04 ? '1' : '0';
-    str[idx + 6] = bt & 0x02 ? '1' : '0';
-    str[idx + 7] = bt & 0x01 ? '1' : '0'; 
-  }
-
-  size_t cnt = 0;
-  for(size_t i = 0; i < str_len; ++i)
-  {
-    if(i < skip_beg)
-      continue;
-
-    if(cnt % bit_word_len == 0 && cnt != 0)
-      printf(" ");
-    
-    printf("%c", str[i]);
-    ++cnt;
-  }
-
-  free(str);
-  printf("\n"); 
-}
-
-static void print_bin_with_title(const char *title, const uint8_t * const buffer, size_t size, size_t bit_word_len, size_t skip_beg)
-{
-  printf("%s ", title);
-  print_bin(buffer, size, bit_word_len, skip_beg);
 }
 
 static size_t map_bit_pos_to_byte_idx(size_t idx)
@@ -405,14 +422,16 @@ static void key_rotation(const uint8_t * const key_pc1_buffer, size_t iteration,
       shift_left_cd_mv_bit(d_i, 4);
     }
 
+#ifdef LOG_DETAILES
     sprintf(title_str, "C%lu =", i);
-    print_bin_with_title(title_str, c_i, 4, 28, 4);
+    print_bin_simple(title_str, c_i, 4);
     
     memset(title_str, 0x00, sizeof title_str);
 
     sprintf(title_str, "D%lu =", i);
-    print_bin_with_title(title_str, d_i, 4, 28, 4);
+    print_bin_simple(title_str, d_i, 4);
     memset(title_str, 0x00, sizeof title_str);
+#endif
   }
 
   const uint8_t cd[7] =
@@ -426,15 +445,18 @@ static void key_rotation(const uint8_t * const key_pc1_buffer, size_t iteration,
     d_i[2],
     d_i[3]
   }; 
-  
-  print_bin_with_title("CD =", cd, 7, 7, 0); 
-  
+ 
+#ifdef LOG_DETAILES 
+  print_bin_bits("CD =", cd, 7, 7);
+
   uint8_t K_pc2[KEY_PC2_SIZE] = {0};
   key_pc2(cd, K_pc2);
   
   sprintf(title_str, "K%lu =", iteration);
-  print_bin_with_title(title_str, K_pc2, KEY_PC2_SIZE, 6, 0);
+  print_bin_bits(title_str, K_pc2, KEY_PC2_SIZE, 6);
   memset(title_str, 0x00, sizeof title_str);
+#endif
+
 }
 
 int main(int argc, char **argv)
@@ -472,11 +494,14 @@ int main(int argc, char **argv)
   hex_str_to_bytes(key_file_buffer, KEY_HEXSTR_LEN, key_bytes);
 
   //print_as_hexstr(key_bytes, sizeof key_bytes);
-  print_bin_with_title("K =", key_bytes, KEY_SIZE, 8, 0);
+  print_bin_8bit("K =", key_bytes, KEY_SIZE);
 
   uint8_t key_pc1_bytes[KEY_PC1_SIZE] = {0};
   key_pc1(key_bytes, key_pc1_bytes);
-  print_bin_with_title("K+ =", key_pc1_bytes, KEY_PC1_SIZE, 7, 0);
+
+#ifdef LOG_DETAILES
+  print_bin_bits("K+ =", key_pc1_bytes, KEY_PC1_SIZE, 7);
+#endif
 
   key_rotation(key_pc1_bytes, 16, NULL);
 
