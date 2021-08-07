@@ -336,43 +336,12 @@ static void key_pc2(const uint8_t * const buffer, uint8_t *ret)
   ret[5] |= buffer[map_bit_pos_to_byte_idx(34)] << 1 & 0x80;
   ret[5] |= buffer[map_bit_pos_to_byte_idx(53)] << 3 & 0x40;
 
-  ret[5] |= buffer[map_bit_pos_to_byte_idx(46)] << 2 & 0x20;
+  ret[5] |= buffer[map_bit_pos_to_byte_idx(46)] << 3 & 0x20;
   ret[5] |= buffer[map_bit_pos_to_byte_idx(42)] >> 2 & 0x10;
   ret[5] |= buffer[map_bit_pos_to_byte_idx(50)] >> 3 & 0x08;
   ret[5] |= buffer[map_bit_pos_to_byte_idx(36)] >> 2 & 0x04;
   ret[5] |= buffer[map_bit_pos_to_byte_idx(29)] >> 2 & 0x02;
   ret[5] |= buffer[map_bit_pos_to_byte_idx(32)]      & 0x01;
-
-
-#if 0
-  ret[0] |= buffer[1 /*14*/] << 5 & 0x80;
-  ret[0] |= buffer[2 /*17*/] >> 1 & 0x40;
-  ret[0] |= buffer[1 /*11*/]      & 0x20;
-  ret[0] |= buffer[2 /*24*/] << 4 & 0x10;
-  ret[0] |= buffer[0 /*1*/ ] >> 4 & 0x08;
-  ret[0] |= buffer[0 /*5*/ ] >> 1 & 0x04;
-
-  ret[0] |= buffer[0 /*3*/ ] >> 4 & 0x02;
-  ret[0] |= buffer[3 /*28*/] >> 4 & 0x01;
-  ret[1] |= buffer[1 /*15*/] << 6 & 0x80;
-  ret[1] |= buffer[0 /*6 */] << 4 & 0x40;
-  ret[1] |= buffer[2 /*21*/] << 2 & 0x20;
-  ret[1] |= buffer[1 /*10*/] >> 2 & 0x10;
-
-  ret[1] |= buffer[2 /*23*/] << 2 & 0x08;
-  ret[1] |= buffer[2 /*19*/] >> 3 & 0x04;
-  ret[1] |= buffer[1 /*12*/] >> 3 & 0x02;
-  ret[1] |= buffer[0 /*4 */] >> 4 & 0x01;
-  ret[2] |= buffer[3 /*26*/] << 1 & 0x80;
-  ret[2] |= buffer[0 /*8 */] << 6 & 0x40;
-
-  ret[2] |= buffer[1 /*16*/] << 5 & 0x20;
-  ret[2] |= buffer[0 /*7 */] << 3 & 0x10;
-  ret[2] |= buffer[3 /*27*/] >> 2 & 0x08;
-  ret[2] |= buffer[2 /*20*/] >> 2 & 0x04;
-  ret[2] |= buffer[1 /*13*/] >> 2 & 0x02;
-  ret[2] |= buffer[0 /*2 */] >> 6 & 0x01;
-#endif
 }
 
 void static shift_left_cd_mv_bit(uint8_t *buffer, size_t size)
@@ -512,7 +481,7 @@ int main(int argc, char **argv)
   key_pc1(key_bytes, key_pc1_bytes);
   print_bin_with_title("K+ =", key_pc1_bytes, KEY_PC1_SIZE, 7, 0);
 
-  key_rotation(key_pc1_bytes, 1, NULL);
+  key_rotation(key_pc1_bytes, 16, NULL);
 
 end:
   if(key_file_buffer)
