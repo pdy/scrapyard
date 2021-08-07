@@ -32,7 +32,7 @@ post-build: main-build
 	$(STRIP) $(BUILD)/*
 
 main-build: pre-build
-	@$(MAKE) --no-print-directory $(BUILD)/c99_practice
+	@$(MAKE) --no-print-directory $(BUILD)/des
 	
 clean:
 	@rm -r ./bin
