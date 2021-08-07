@@ -9,6 +9,7 @@
 #define KEY_PC1_SIZE 7
 #define KEY_PC2_SIZE 6
 #define KEY_HEXSTR_LEN (KEY_SIZE * 2)
+#define KEY_ITER_SIZE KEY_PC2_SIZE
 
 #define LOG_DETAILS
 //#define LOG_KEY_CD_DETAILS
@@ -71,7 +72,7 @@ static void print_bin_simple(const char *title, const uint8_t * const buffer, si
 
 static void print_bin_bits(const char *title, const uint8_t * const buffer, size_t size, size_t bit_word_len)
 {
-  print_bin_with_title(title, buffer, size, 8, 0);
+  print_bin_with_title(title, buffer, size, bit_word_len, 0);
 }
 
 static void print_bin_8bit(const char *title, const uint8_t * const buffer, size_t size)
@@ -88,7 +89,7 @@ static long get_file_size(FILE *file)
   return ret;
 }
 
-static unsigned long read_file(const char * const filename, char **ret)
+static unsigned long read_whole_file(const char * const filename, char **ret)
 {
   FILE *file = fopen(filename, "r");
   if(!file)
@@ -453,16 +454,21 @@ static void key_rotation(const uint8_t * const key_pc1_buffer, size_t iteration,
   print_bin_bits("CD =", cd, 7, 7);
 #endif
 
-
-  uint8_t K_pc2[KEY_PC2_SIZE] = {0};
-  key_pc2(cd, K_pc2);
+  if(!ret)
+  {
+    uint8_t K_pc2[KEY_PC2_SIZE] = {0};
+    key_pc2(cd, K_pc2);
 
 #ifdef LOG_DETAILS
-  sprintf(title_str, "K%lu =", iteration);
-  print_bin_bits(title_str, K_pc2, KEY_PC2_SIZE, 6);
-  memset(title_str, 0x00, sizeof title_str);
+    sprintf(title_str, "K%lu =", iteration);
+    print_bin_bits(title_str, K_pc2, KEY_PC2_SIZE, 6);
+    memset(title_str, 0x00, sizeof title_str);
 #endif
-
+  }
+  else
+  {
+    key_pc2(cd, ret);
+  }
 }
 
 int main(int argc, char **argv)
@@ -474,7 +480,7 @@ int main(int argc, char **argv)
   }
  
   char *key_file_buffer = NULL;
-  const unsigned long key_file_size = read_file(argv[1], &key_file_buffer);
+  const unsigned long key_file_size = read_whole_file(argv[1], &key_file_buffer);
   if(!key_file_size || !key_file_buffer)
   {
     printf("Err readng key file size %lu\n", key_file_size);
@@ -511,7 +517,17 @@ int main(int argc, char **argv)
   print_bin_bits("K PC1 =", key_pc1_bytes, KEY_PC1_SIZE, 7);
 #endif
 
-  key_rotation(key_pc1_bytes, 16, NULL);
+  const size_t iter = 16;
+  uint8_t key_iter[KEY_ITER_SIZE] = {0};
+  key_rotation(key_pc1_bytes, iter, key_iter);
+#ifdef LOG_DETAILS
+  {
+    char title_str[10 + 1] = {0};
+    sprintf(title_str, "K%lu =", iter);
+    print_bin_bits(title_str, key_iter, KEY_ITER_SIZE, 6);
+  }
+#endif
+
 
 end:
   if(key_file_buffer)
