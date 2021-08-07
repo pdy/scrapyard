@@ -10,7 +10,8 @@
 #define KEY_PC2_SIZE 6
 #define KEY_HEXSTR_LEN (KEY_SIZE * 2)
 
-#define LOG_DETAILES
+#define LOG_DETAILS
+//#define LOG_KEY_CD_DETAILS
 
 static const char HEX_STR_CHARS[] = "0123456789AaBbCcDdEeFf";
 
@@ -399,8 +400,10 @@ static void key_rotation(const uint8_t * const key_pc1_buffer, size_t iteration,
     key_pc1_buffer[6] 
   };
 
+#ifdef LOG_KEY_CD_DETAILS
   print_bin_with_title("C0 =", c_i, 4, 7, 4);
   print_bin_with_title("D0 =", d_i, 4, 7, 4);
+#endif
 
   char title_str[10 + 1] = {0};
   for(size_t i = 1; i <= iteration; ++i)
@@ -422,7 +425,7 @@ static void key_rotation(const uint8_t * const key_pc1_buffer, size_t iteration,
       shift_left_cd_mv_bit(d_i, 4);
     }
 
-#ifdef LOG_DETAILES
+#ifdef LOG_KEY_CD_DETAILS
     sprintf(title_str, "C%lu =", i);
     print_bin_simple(title_str, c_i, 4);
     
@@ -446,12 +449,15 @@ static void key_rotation(const uint8_t * const key_pc1_buffer, size_t iteration,
     d_i[3]
   }; 
  
-#ifdef LOG_DETAILES 
+#ifdef LOG_KEY_CD_DETAILS
   print_bin_bits("CD =", cd, 7, 7);
+#endif
+
 
   uint8_t K_pc2[KEY_PC2_SIZE] = {0};
   key_pc2(cd, K_pc2);
-  
+
+#ifdef LOG_DETAILS
   sprintf(title_str, "K%lu =", iteration);
   print_bin_bits(title_str, K_pc2, KEY_PC2_SIZE, 6);
   memset(title_str, 0x00, sizeof title_str);
@@ -493,14 +499,16 @@ int main(int argc, char **argv)
   uint8_t key_bytes[KEY_SIZE] = {0};
   hex_str_to_bytes(key_file_buffer, KEY_HEXSTR_LEN, key_bytes);
 
+#ifdef LOG_DETAILS
   //print_as_hexstr(key_bytes, sizeof key_bytes);
   print_bin_8bit("K =", key_bytes, KEY_SIZE);
+#endif
 
   uint8_t key_pc1_bytes[KEY_PC1_SIZE] = {0};
   key_pc1(key_bytes, key_pc1_bytes);
 
-#ifdef LOG_DETAILES
-  print_bin_bits("K+ =", key_pc1_bytes, KEY_PC1_SIZE, 7);
+#ifdef LOG_DETAILS
+  print_bin_bits("K PC1 =", key_pc1_bytes, KEY_PC1_SIZE, 7);
 #endif
 
   key_rotation(key_pc1_bytes, 16, NULL);
