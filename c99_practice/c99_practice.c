@@ -11,8 +11,12 @@
 #define KEY_HEXSTR_LEN (KEY_SIZE * 2)
 #define KEY_ITER_SIZE KEY_PC2_SIZE
 
-#define LOG_KEY_DETAILS
+#define MSG_SINGLE_BLOCK_SIZE 8
+#define MSG_IP_SIZE 8
+
+//#define LOG_KEY_DETAILS
 //#define LOG_KEY_CD_DETAILS
+#define LOG_MSG_DETAILS
 
 static const char HEX_STR_CHARS[] = "0123456789AaBbCcDdEeFf";
 
@@ -471,6 +475,58 @@ static void key_rotation(const uint8_t * const key_pc1_buffer, size_t iteration,
   }
 }
 
+static void msg_ip(const uint8_t * const buffer, uint8_t *ret)
+{
+  /*
+   *
+    58    50   42    34    26   18    10    2
+    60    52   44    36    28   20    12    4
+    62    54   46    38    30   22    14    6
+    64    56   48    40    32   24    16    8
+    57    49   41    33    25   17     9    1
+    59    51   43    35    27   19    11    3
+    61    53   45    37    29   21    13    5
+    63    55   47    39    31   23    15    7
+   *
+   */
+
+  ret[0] |= buffer[map_bit_pos_to_byte_idx(58)] << 2 & 0x80;
+  ret[0] |= buffer[map_bit_pos_to_byte_idx(50)]      & 0x40;
+  ret[0] |= buffer[map_bit_pos_to_byte_idx(42)] >> 1 & 0x20;
+  ret[0] |= buffer[map_bit_pos_to_byte_idx(34)] >> 2 & 0x10;
+  ret[0] |= buffer[map_bit_pos_to_byte_idx(26)] >> 3 & 0x08;
+  ret[0] |= buffer[map_bit_pos_to_byte_idx(18)] >> 4 & 0x04;
+  ret[0] |= buffer[map_bit_pos_to_byte_idx(10)] >> 5 & 0x02;
+  ret[0] |= buffer[map_bit_pos_to_byte_idx(2) ] >> 6 & 0x01;
+
+  ret[1] |= buffer[map_bit_pos_to_byte_idx(60)] << 3 & 0x80;
+  ret[1] |= buffer[map_bit_pos_to_byte_idx(52)] << 2 & 0x40;
+  ret[1] |= buffer[map_bit_pos_to_byte_idx(44)] << 1 & 0x20;
+  ret[1] |= buffer[map_bit_pos_to_byte_idx(36)]      & 0x10;
+  ret[1] |= buffer[map_bit_pos_to_byte_idx(28)] >> 1 & 0x08;
+  ret[1] |= buffer[map_bit_pos_to_byte_idx(20)] >> 2 & 0x04;
+  ret[1] |= buffer[map_bit_pos_to_byte_idx(12)] >> 3 & 0x02;
+  ret[1] |= buffer[map_bit_pos_to_byte_idx(4) ] >> 4 & 0x01;
+
+  ret[2] |= buffer[map_bit_pos_to_byte_idx(62)] << 5 & 0x80;
+  ret[2] |= buffer[map_bit_pos_to_byte_idx(54)] << 4 & 0x40;
+  ret[2] |= buffer[map_bit_pos_to_byte_idx(46)] << 3 & 0x20;
+  ret[2] |= buffer[map_bit_pos_to_byte_idx(38)] << 2 & 0x10;
+  ret[2] |= buffer[map_bit_pos_to_byte_idx(30)] << 1 & 0x08;
+  ret[2] |= buffer[map_bit_pos_to_byte_idx(22)]      & 0x04;
+  ret[2] |= buffer[map_bit_pos_to_byte_idx(14)] >> 1 & 0x02;
+  ret[2] |= buffer[map_bit_pos_to_byte_idx(6) ] >> 2 & 0x01;
+
+  ret[3] |= buffer[map_bit_pos_to_byte_idx(64)] << 7 & 0x80;
+  ret[3] |= buffer[map_bit_pos_to_byte_idx(56)] << 6 & 0x40;
+  ret[3] |= buffer[map_bit_pos_to_byte_idx(48)] << 5 & 0x20;
+  ret[3] |= buffer[map_bit_pos_to_byte_idx(40)] << 4 & 0x10;
+  ret[3] |= buffer[map_bit_pos_to_byte_idx(32)] << 3 & 0x08;
+  ret[3] |= buffer[map_bit_pos_to_byte_idx(24)] << 2 & 0x04;
+  ret[3] |= buffer[map_bit_pos_to_byte_idx(16)] << 1 & 0x02;
+  ret[3] |= buffer[map_bit_pos_to_byte_idx(8) ]      & 0x01;
+}
+
 int main(int argc, char **argv)
 {
   if(argc != 3)
@@ -484,20 +540,20 @@ int main(int argc, char **argv)
   if(!key_file_size || !key_file_buffer)
   {
     printf("Err readng key file size %lu\n", key_file_size);
-    goto end;
+    goto key_end;
   }
 
   // ------------------------------  + 1 cause line feed
   if(key_file_size != KEY_HEXSTR_LEN + 1)
   {
     printf("key file size is required to be hex string consisting 16 character\n");
-    goto end;
+    goto key_end;
   }
 
   if(!is_valid_hex_str(key_file_buffer, KEY_HEXSTR_LEN))
   {
     printf("%s does not contain valid hex str\n", argv[1]);
-    goto end;
+    goto key_end;
   }
 
   //print_buffer(key_file_buffer, key_file_size);
@@ -529,9 +585,36 @@ int main(int argc, char **argv)
 #endif
 
 
-end:
+  // single block msg handling
+  
+  uint8_t *msg_file_buffer = NULL;
+  const unsigned long msg_file_size = read_whole_file(argv[2], (char**)&msg_file_buffer);
+  if(msg_file_size != MSG_SINGLE_BLOCK_SIZE)
+  {
+    printf("Only single block of data allowed, read [%lu]\n", msg_file_size);
+    goto msg_end;
+  }  
+ 
+  //printf("MSG ");
+  //print_as_hexstr(msg_file_buffer, msg_file_size);
+
+  
+  uint8_t msg_ip_buff[MSG_IP_SIZE] = {0};
+  msg_ip(msg_file_buffer, msg_ip_buff);
+
+#ifdef LOG_MSG_DETAILS
+  print_bin_with_title("M  =", msg_file_buffer, MSG_SINGLE_BLOCK_SIZE, 4, 0);
+  print_bin_with_title("IP =", msg_ip_buff, MSG_IP_SIZE, 4, 0);
+#endif
+
+
+msg_end:
+  if(msg_file_buffer)
+    free(msg_file_buffer);
+
+key_end:
   if(key_file_buffer)
     free(key_file_buffer);
-
+ 
   return 0;
 }
