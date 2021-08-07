@@ -525,6 +525,42 @@ static void msg_ip(const uint8_t * const buffer, uint8_t *ret)
   ret[3] |= buffer[map_bit_pos_to_byte_idx(24)] << 2 & 0x04;
   ret[3] |= buffer[map_bit_pos_to_byte_idx(16)] << 1 & 0x02;
   ret[3] |= buffer[map_bit_pos_to_byte_idx(8) ]      & 0x01;
+
+  ret[4] |= buffer[map_bit_pos_to_byte_idx(57)]      & 0x80;
+  ret[4] |= buffer[map_bit_pos_to_byte_idx(49)] >> 1 & 0x40;
+  ret[4] |= buffer[map_bit_pos_to_byte_idx(41)] >> 2 & 0x20;
+  ret[4] |= buffer[map_bit_pos_to_byte_idx(33)] >> 3 & 0x10;
+  ret[4] |= buffer[map_bit_pos_to_byte_idx(25)] >> 4 & 0x08;
+  ret[4] |= buffer[map_bit_pos_to_byte_idx(17)] >> 5 & 0x04;
+  ret[4] |= buffer[map_bit_pos_to_byte_idx(9) ] >> 6 & 0x02;
+  ret[4] |= buffer[map_bit_pos_to_byte_idx(1) ] >> 7 & 0x01;
+
+  ret[5] |= buffer[map_bit_pos_to_byte_idx(59)] << 2 & 0x80;
+  ret[5] |= buffer[map_bit_pos_to_byte_idx(51)] << 1 & 0x40;
+  ret[5] |= buffer[map_bit_pos_to_byte_idx(43)]      & 0x20;
+  ret[5] |= buffer[map_bit_pos_to_byte_idx(35)] >> 1 & 0x10;
+  ret[5] |= buffer[map_bit_pos_to_byte_idx(27)] >> 2 & 0x08;
+  ret[5] |= buffer[map_bit_pos_to_byte_idx(19)] >> 3 & 0x04;
+  ret[5] |= buffer[map_bit_pos_to_byte_idx(11)] >> 4 & 0x02;
+  ret[5] |= buffer[map_bit_pos_to_byte_idx(3) ] >> 5 & 0x01;
+  
+  ret[6] |= buffer[map_bit_pos_to_byte_idx(61)] << 4 & 0x80;
+  ret[6] |= buffer[map_bit_pos_to_byte_idx(53)] << 3 & 0x40;
+  ret[6] |= buffer[map_bit_pos_to_byte_idx(45)] << 2 & 0x20;
+  ret[6] |= buffer[map_bit_pos_to_byte_idx(37)] << 1 & 0x10;
+  ret[6] |= buffer[map_bit_pos_to_byte_idx(29)]      & 0x08;
+  ret[6] |= buffer[map_bit_pos_to_byte_idx(21)] >> 1 & 0x04;
+  ret[6] |= buffer[map_bit_pos_to_byte_idx(13)] >> 2 & 0x02;
+  ret[6] |= buffer[map_bit_pos_to_byte_idx(5) ] >> 3 & 0x01;
+
+  ret[7] |= buffer[map_bit_pos_to_byte_idx(63)] << 6 & 0x80;
+  ret[7] |= buffer[map_bit_pos_to_byte_idx(55)] << 5 & 0x40;
+  ret[7] |= buffer[map_bit_pos_to_byte_idx(47)] << 4 & 0x20;
+  ret[7] |= buffer[map_bit_pos_to_byte_idx(39)] << 3 & 0x10;
+  ret[7] |= buffer[map_bit_pos_to_byte_idx(31)] << 2 & 0x08;
+  ret[7] |= buffer[map_bit_pos_to_byte_idx(23)] << 1 & 0x04;
+  ret[7] |= buffer[map_bit_pos_to_byte_idx(15)]      & 0x02;
+  ret[7] |= buffer[map_bit_pos_to_byte_idx(7) ] >> 1 & 0x01;
 }
 
 int main(int argc, char **argv)
