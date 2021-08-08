@@ -10,6 +10,7 @@
 #define KEY_PC2_SIZE 6
 #define KEY_HEXSTR_LEN (KEY_SIZE * 2)
 #define KEY_ITER_SIZE KEY_PC2_SIZE
+#define KEY_SUBKEYS_NUM 16
 
 #define MSG_SINGLE_BLOCK_SIZE 8
 #define MSG_IP_SIZE 8
@@ -22,12 +23,12 @@
 
 static const char HEX_STR_CHARS[] = "0123456789AaBbCcDdEeFf";
 
-typedef struct key_rotation_t_
+typedef struct key_rotation_t
 {
   uint8_t *subkeys;
 } key_rotation_t;
 
-typedef struct key_rotation_iterator_t_
+typedef struct key_rotation_iterator_t
 {
   uint8_t *ptr;
   size_t size;
@@ -37,7 +38,7 @@ typedef struct key_rotation_iterator_t_
 static key_rotation_t init_key_rot()
 {
   key_rotation_t ret;
-  ret.subkeys = (uint8_t*)malloc(16 * KEY_ITER_SIZE * sizeof *ret.subkeys);
+  ret.subkeys = (uint8_t*)malloc(KEY_SUBKEYS_NUM * KEY_ITER_SIZE * sizeof *ret.subkeys);
 
   return ret;
 }
@@ -50,7 +51,7 @@ static void free_key_rot(key_rotation_t key_rot)
 
 static key_rotation_iterator_t key_get_iteration(key_rotation_t key_rot, size_t iteration)
 {
-  if(!iteration || iteration > 16)
+  if(!iteration || iteration > KEY_SUBKEYS_NUM)
   {
     const key_rotation_iterator_t ret = { .ptr = NULL, .size = 0};
     return ret;
@@ -72,7 +73,7 @@ static int key_is_iterator_valid(key_rotation_iterator_t it)
 
 static void key_add_iteration(key_rotation_t key_rot, size_t iteration, uint8_t *key_pc2)
 {
-  assert(iteration >= 1 && iteration <= 16);
+  assert(iteration >= 1 && iteration <= KEY_SUBKEYS_NUM);
 
   memcpy(key_rot.subkeys + ((iteration - 1) * KEY_ITER_SIZE), key_pc2, KEY_ITER_SIZE);
 }
