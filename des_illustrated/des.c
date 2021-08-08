@@ -13,12 +13,69 @@
 
 #define MSG_SINGLE_BLOCK_SIZE 8
 #define MSG_IP_SIZE 8
+#define MSG_LR_SIZE 4
 
-//#define LOG_KEY_DETAILS
+#define LOG_KEY_DETAILS
 //#define LOG_KEY_CD_DETAILS
-#define LOG_MSG_DETAILS
+//#define LOG_MSG_DETAILS
+//#define MSG_LR_DETAILS
 
 static const char HEX_STR_CHARS[] = "0123456789AaBbCcDdEeFf";
+
+typedef struct key_rotation_t_
+{
+  uint8_t *subkeys;
+} key_rotation_t;
+
+typedef struct key_rotation_iterator_t_
+{
+  uint8_t *ptr;
+  size_t size;
+
+} key_rotation_iterator_t;
+
+static key_rotation_t init_key_rot()
+{
+  key_rotation_t ret;
+  ret.subkeys = (uint8_t*)malloc(16 * KEY_ITER_SIZE * sizeof *ret.subkeys);
+
+  return ret;
+}
+
+static void free_key_rot(key_rotation_t key_rot)
+{
+  if(key_rot.subkeys)
+    free(key_rot.subkeys);
+}
+
+static key_rotation_iterator_t key_get_iteration(key_rotation_t key_rot, size_t iteration)
+{
+  if(!iteration || iteration > 16)
+  {
+    const key_rotation_iterator_t ret = { .ptr = NULL, .size = 0};
+    return ret;
+  }
+
+  const key_rotation_iterator_t it = 
+  {
+    .ptr = key_rot.subkeys + ((iteration - 1) * KEY_ITER_SIZE),
+    .size = KEY_ITER_SIZE
+  };
+
+  return it;
+}
+
+static int key_is_iterator_valid(key_rotation_iterator_t it)
+{
+  return it.ptr != NULL && it.size == KEY_ITER_SIZE;
+}
+
+static void key_add_iteration(key_rotation_t key_rot, size_t iteration, uint8_t *key_pc2)
+{
+  assert(iteration >= 1 && iteration <= 16);
+
+  memcpy(key_rot.subkeys + ((iteration - 1) * KEY_ITER_SIZE), key_pc2, KEY_ITER_SIZE);
+}
 
 static void usage(void)
 {
@@ -84,6 +141,20 @@ static void print_bin_8bit(const char *title, const uint8_t * const buffer, size
   print_bin_bits(title, buffer, size, 8);
 }
 
+static void print_key_rot(const key_rotation_t key_rot)
+{
+  size_t idx = 1;
+  key_rotation_iterator_t it = key_get_iteration(key_rot, idx);
+  char title_str[10 + 1] = {0};
+  for(; key_is_iterator_valid(it); ++idx, it = key_get_iteration(key_rot, idx))
+  {
+    sprintf(title_str, "K%lu =", idx);
+    print_bin_with_title(title_str, it.ptr, it.size, 6, 0);
+    memset(title_str, 0x00, sizeof *title_str);
+  }
+}
+
+
 static long get_file_size(FILE *file)
 {
   fseek(file, 0, SEEK_END);
@@ -120,7 +191,7 @@ static void print_buffer(const char * const buffer, unsigned long size)
   printf("\n"); 
 }
 
-static void print_as_hexstr(uint8_t *buffer, size_t size)
+static void print_as_hexstr(const uint8_t * const buffer, size_t size)
 {
   for(size_t i = 0; i < size; ++i)
     printf("%2x ", buffer[i]);
@@ -385,10 +456,8 @@ void static shift_left_cd_mv_bit(uint8_t *buffer, size_t size)
   buffer[size - 1] |= last_bit; 
 }
 
-static void key_rotation(const uint8_t * const key_pc1_buffer, size_t iteration, uint8_t *ret)
+static key_rotation_t key_rotation(const uint8_t * const key_pc1_buffer)
 {
-  assert(iteration >= 0 && iteration <= 16);
-
   uint8_t c_i[4] = 
   {
     ((key_pc1_buffer[0] & 0xf0) >> 4),
@@ -410,8 +479,10 @@ static void key_rotation(const uint8_t * const key_pc1_buffer, size_t iteration,
   print_bin_with_title("D0 =", d_i, 4, 7, 4);
 #endif
 
+  key_rotation_t ret_subkeys = init_key_rot();
+  
   char title_str[10 + 1] = {0};
-  for(size_t i = 1; i <= iteration; ++i)
+  for(size_t i = 1; i <= 16; ++i)
   {
     if(i == 1 || i == 2 || i == 9 || i == 16)
     {
@@ -440,39 +511,37 @@ static void key_rotation(const uint8_t * const key_pc1_buffer, size_t iteration,
     print_bin_simple(title_str, d_i, 4);
     memset(title_str, 0x00, sizeof title_str);
 #endif
-  }
 
-  const uint8_t cd[7] =
-  {
-    (uint8_t)((c_i[0] & 0x0f) << 4 | (c_i[1] & 0xf0) >> 4),
-    (uint8_t)((c_i[1] & 0x0f) << 4 | (c_i[2] & 0xf0) >> 4),
-    (uint8_t)((c_i[2] & 0x0f) << 4 | (c_i[3] & 0xf0) >> 4),
+    const uint8_t cd[7] =
+    {
+      (uint8_t)((c_i[0] & 0x0f) << 4 | (c_i[1] & 0xf0) >> 4),
+      (uint8_t)((c_i[1] & 0x0f) << 4 | (c_i[2] & 0xf0) >> 4),
+      (uint8_t)((c_i[2] & 0x0f) << 4 | (c_i[3] & 0xf0) >> 4),
 
-    (uint8_t)((c_i[3] & 0x0f) << 4 | (d_i[0])),
-    d_i[1],
-    d_i[2],
-    d_i[3]
-  }; 
- 
+      (uint8_t)((c_i[3] & 0x0f) << 4 | (d_i[0])),
+      d_i[1],
+      d_i[2],
+      d_i[3]
+    };
+
 #ifdef LOG_KEY_CD_DETAILS
-  print_bin_bits("CD =", cd, 7, 7);
+    print_bin_bits("CD =", cd, 7, 7);
 #endif
 
-  if(!ret)
-  {
     uint8_t K_pc2[KEY_PC2_SIZE] = {0};
     key_pc2(cd, K_pc2);
 
+#if 0
 #ifdef LOG_KEY_DETAILS
-    sprintf(title_str, "K%lu =", iteration);
+    sprintf(title_str, "K%lu =", i);
     print_bin_bits(title_str, K_pc2, KEY_PC2_SIZE, 6);
     memset(title_str, 0x00, sizeof title_str);
 #endif
-  }
-  else
-  {
-    key_pc2(cd, ret);
-  }
+#endif
+    key_add_iteration(ret_subkeys, i, K_pc2);
+  } 
+
+  return ret_subkeys; 
 }
 
 static void msg_ip(const uint8_t * const buffer, uint8_t *ret)
@@ -563,6 +632,12 @@ static void msg_ip(const uint8_t * const buffer, uint8_t *ret)
   ret[7] |= buffer[map_bit_pos_to_byte_idx(7) ] >> 1 & 0x01;
 }
 
+static void msg_get_LR(const uint8_t * const ipbuffer, uint8_t *retL, uint8_t *retR)
+{
+  memcpy(retL, ipbuffer, MSG_LR_SIZE);
+  memcpy(retR, ipbuffer + MSG_LR_SIZE, MSG_LR_SIZE);
+}
+
 int main(int argc, char **argv)
 {
   if(argc != 3)
@@ -609,18 +684,17 @@ int main(int argc, char **argv)
   print_bin_bits("K PC1 =", key_pc1_bytes, KEY_PC1_SIZE, 7);
 #endif
 
-  const size_t iter = 16;
-  uint8_t key_iter[KEY_ITER_SIZE] = {0};
-  key_rotation(key_pc1_bytes, iter, key_iter);
-#ifdef LOG_KEY_DETAILS
+  const key_rotation_t key_rot = key_rotation(key_pc1_bytes);
+  if(!key_rot.subkeys)
   {
-    char title_str[10 + 1] = {0};
-    sprintf(title_str, "K%lu =", iter);
-    print_bin_bits(title_str, key_iter, KEY_ITER_SIZE, 6);
+    printf("couldn init subkeys");
+    goto key_end;
   }
+
+#ifdef LOG_KEY_DETAILS
+  print_key_rot(key_rot);
 #endif
-
-
+  
   // single block msg handling
   
   uint8_t *msg_file_buffer = NULL;
@@ -643,8 +717,16 @@ int main(int argc, char **argv)
   print_bin_with_title("IP =", msg_ip_buff, MSG_IP_SIZE, 4, 0);
 #endif
 
+  uint8_t L[MSG_LR_SIZE] = {0}, R[MSG_LR_SIZE] = {0};
+  msg_get_LR(msg_ip_buff, L, R);
+#ifdef MSG_LR_DETAILS
+  print_bin_with_title("L0 =", L, MSG_LR_SIZE, 4, 0); 
+  print_bin_with_title("R0 =", R, MSG_LR_SIZE, 4, 0); 
+#endif
+
 
 msg_end:
+  free_key_rot(key_rot);
   if(msg_file_buffer)
     free(msg_file_buffer);
 
