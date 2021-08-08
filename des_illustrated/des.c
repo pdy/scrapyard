@@ -481,7 +481,10 @@ static key_rotation_t key_rotation(const uint8_t * const key_pc1_buffer)
 #endif
 
   key_rotation_t ret_subkeys = init_key_rot();
-  
+  if(!ret_subkeys.subkeys)
+    return ret_subkeys;
+
+   
   char title_str[10 + 1] = {0};
   for(size_t i = 1; i <= 16; ++i)
   {
