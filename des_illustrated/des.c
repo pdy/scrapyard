@@ -155,7 +155,6 @@ static void print_key_rot(const key_rotation_t key_rot)
   }
 }
 
-
 static long get_file_size(FILE *file)
 {
   fseek(file, 0, SEEK_END);
