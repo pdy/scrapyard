@@ -569,6 +569,16 @@ static void msg_get_LR(const uint8_t * const ipbuffer, uint8_t *retL, uint8_t *r
   memcpy(retR, ipbuffer + MSG_LR_SIZE, MSG_LR_SIZE);
 }
 
+static void copy_LR(const uint8_t * const from, uint8_t *to)
+{
+  memcpy(to, from, MSG_LR_SIZE);
+}
+
+static void calc_Rn(const uint8_t * const L, const uint8_t * const R, key_rotation_iterator_t key_rot, uint8_t *out_R)
+{
+  
+}
+
 int main(int argc, char **argv)
 {
   if(argc != 3)
@@ -654,6 +664,15 @@ int main(int argc, char **argv)
   print_bin_with_title("L0 =", L, MSG_LR_SIZE, 4, 0); 
   print_bin_with_title("R0 =", R, MSG_LR_SIZE, 4, 0); 
 #endif
+
+  uint8_t R_tmp[MSG_LR_SIZE] = {0};
+  for(size_t i=1; i <= 16; ++i)
+  {
+    calc_Rn(L, R, key_get_iteration(key_rot, i), R_tmp);
+
+    copy_LR(R, L);
+    copy_LR(R_tmp, R);
+  }
 
 msg_end:
   free_key_rot(key_rot);
