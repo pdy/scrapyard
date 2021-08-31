@@ -151,7 +151,7 @@ static void print_key_rot(const key_rotation_t key_rot)
   {
     sprintf(title_str, "K%lu =", idx);
     print_bin_with_title(title_str, it.ptr, it.size, 6, 0);
-    memset(title_str, 0x00, sizeof *title_str);
+    memset(title_str, 0x00, sizeof title_str);
   }
 }
 
