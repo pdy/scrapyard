@@ -21,6 +21,16 @@
 //#define LOG_MSG_DETAILS
 //#define MSG_LR_DETAILS
 
+#define GET_BYTE_IDX(bit_pos) ((size_t)(bit_pos - 1) / 8)
+
+void print_bin_detail(const uint8_t * const buffer, size_t size, size_t bit_word_len, size_t skip_beg);
+void print_bin_with_title(const char *title, const uint8_t * const buffer, size_t size, size_t bit_word_len, size_t skip_beg);
+void print_bin_simple(const char *title, const uint8_t * const buffer, size_t size);
+void print_bin_bits(const char *title, const uint8_t * const buffer, size_t size, size_t bit_word_len);
+void print_bin_8bit(const char *title, const uint8_t * const buffer, size_t size);
+void print_buffer(const char * const buffer, unsigned long size);
+void print_as_hexstr(const uint8_t * const buffer, size_t size);
+
 static const char HEX_STR_CHARS[] = "0123456789AaBbCcDdEeFf";
 
 typedef struct key_rotation_t
@@ -78,71 +88,7 @@ static void key_add_iteration(key_rotation_t key_rot, size_t iteration, uint8_t 
   memcpy(key_rot.subkeys + ((iteration - 1) * KEY_ITER_SIZE), key_pc2, KEY_ITER_SIZE);
 }
 
-static void usage(void)
-{
-  printf("c99_practice <file_with_hex_str_key> <binary_file>\n");
-}
-
-static void print_bin_detail(const uint8_t * const buffer, size_t size, size_t bit_word_len, size_t skip_beg)
-{
-  // this would have been much simpler if I wouldn't need to print various bit word bytes from time to time
-
-  const size_t str_len = size * 8 * sizeof(char);
-  char *str = (char*)malloc(str_len);
-  for(size_t i = 0; i < size; ++i)
-  {
-    const uint8_t bt = buffer[i];
-    const size_t idx = i * 8;
-
-    str[idx + 0] = bt & 0x80 ? '1' : '0';
-    str[idx + 1] = bt & 0x40 ? '1' : '0';
-    str[idx + 2] = bt & 0x20 ? '1' : '0';
-    str[idx + 3] = bt & 0x10 ? '1' : '0';
-    str[idx + 4] = bt & 0x08 ? '1' : '0';
-    str[idx + 5] = bt & 0x04 ? '1' : '0';
-    str[idx + 6] = bt & 0x02 ? '1' : '0';
-    str[idx + 7] = bt & 0x01 ? '1' : '0'; 
-  }
-
-  size_t cnt = 0;
-  for(size_t i = 0; i < str_len; ++i)
-  {
-    if(i < skip_beg)
-      continue;
-
-    if(cnt % bit_word_len == 0 && cnt != 0)
-      printf(" ");
-    
-    printf("%c", str[i]);
-    ++cnt;
-  }
-  
-  free(str);
-  printf("\n"); 
-}
-
-static void print_bin_with_title(const char *title, const uint8_t * const buffer, size_t size, size_t bit_word_len, size_t skip_beg)
-{
-  printf("%s ", title);
-  print_bin_detail(buffer, size, bit_word_len, skip_beg);
-}
-
-static void print_bin_simple(const char *title, const uint8_t * const buffer, size_t size)
-{
-  print_bin_with_title(title, buffer, size, size * 8, 0);
-}
-
-static void print_bin_bits(const char *title, const uint8_t * const buffer, size_t size, size_t bit_word_len)
-{
-  print_bin_with_title(title, buffer, size, bit_word_len, 0);
-}
-
-static void print_bin_8bit(const char *title, const uint8_t * const buffer, size_t size)
-{
-  print_bin_bits(title, buffer, size, 8);
-}
-
-static void print_key_rot(const key_rotation_t key_rot)
+static void key_rotation_print(const key_rotation_t key_rot)
 {
   size_t idx = 1;
   key_rotation_iterator_t it = key_get_iteration(key_rot, idx);
@@ -153,6 +99,11 @@ static void print_key_rot(const key_rotation_t key_rot)
     print_bin_with_title(title_str, it.ptr, it.size, 6, 0);
     memset(title_str, 0x00, sizeof title_str);
   }
+}
+
+static void usage(void)
+{
+  printf("c99_practice <file_with_hex_str_key> <binary_file>\n");
 }
 
 static long get_file_size(FILE *file)
@@ -181,22 +132,6 @@ static unsigned long read_whole_file(const char * const filename, char **ret)
 
 //  ret = buffer;
   return actual_size;
-}
-
-static void print_buffer(const char * const buffer, unsigned long size)
-{
-  for(unsigned long i = 0; i < size; ++i)
-   printf("%c", buffer[i]);
-
-  printf("\n"); 
-}
-
-static void print_as_hexstr(const uint8_t * const buffer, size_t size)
-{
-  for(size_t i = 0; i < size; ++i)
-    printf("%2x ", buffer[i]);
-
-  printf("\n");
 }
 
 static int is_valid_hex_str(const char * const buffer, size_t size)
@@ -278,11 +213,6 @@ static void hex_str_to_bytes(const char * const buffer, unsigned long size, uint
   }
 }
 
-static size_t map_bit_pos_to_byte_idx(size_t idx)
-{
-  return (size_t)(idx - 1) / 8;  
-}
-
 static void key_pc1(const uint8_t * const buffer, uint8_t *ret)
 {
   /*
@@ -298,69 +228,69 @@ static void key_pc1(const uint8_t * const buffer, uint8_t *ret)
    *
    */
 
-  ret[0] |= buffer[map_bit_pos_to_byte_idx(57)]      & 0x80;
-  ret[0] |= buffer[map_bit_pos_to_byte_idx(49)] >> 1 & 0x40;
-  ret[0] |= buffer[map_bit_pos_to_byte_idx(41)] >> 2 & 0x20;
-  ret[0] |= buffer[map_bit_pos_to_byte_idx(33)] >> 3 & 0x10;
-  ret[0] |= buffer[map_bit_pos_to_byte_idx(25)] >> 4 & 0x08;
-  ret[0] |= buffer[map_bit_pos_to_byte_idx(17)] >> 5 & 0x04;
-  ret[0] |= buffer[map_bit_pos_to_byte_idx(9)]  >> 6 & 0x02;
+  ret[0] |= buffer[GET_BYTE_IDX(57)]      & 0x80;
+  ret[0] |= buffer[GET_BYTE_IDX(49)] >> 1 & 0x40;
+  ret[0] |= buffer[GET_BYTE_IDX(41)] >> 2 & 0x20;
+  ret[0] |= buffer[GET_BYTE_IDX(33)] >> 3 & 0x10;
+  ret[0] |= buffer[GET_BYTE_IDX(25)] >> 4 & 0x08;
+  ret[0] |= buffer[GET_BYTE_IDX(17)] >> 5 & 0x04;
+  ret[0] |= buffer[GET_BYTE_IDX(9)]  >> 6 & 0x02;
  
-  ret[0] |= buffer[map_bit_pos_to_byte_idx(1)]  >> 7 & 0x01;
-  ret[1] |= buffer[map_bit_pos_to_byte_idx(58)] << 2 & 0x80;
-  ret[1] |= buffer[map_bit_pos_to_byte_idx(50)]      & 0x40;
-  ret[1] |= buffer[map_bit_pos_to_byte_idx(42)] >> 1 & 0x20;
-  ret[1] |= buffer[map_bit_pos_to_byte_idx(34)] >> 2 & 0x10;
-  ret[1] |= buffer[map_bit_pos_to_byte_idx(26)] >> 3 & 0x08;
-  ret[1] |= buffer[map_bit_pos_to_byte_idx(18)] >> 4 & 0x04;
+  ret[0] |= buffer[GET_BYTE_IDX(1)]  >> 7 & 0x01;
+  ret[1] |= buffer[GET_BYTE_IDX(58)] << 2 & 0x80;
+  ret[1] |= buffer[GET_BYTE_IDX(50)]      & 0x40;
+  ret[1] |= buffer[GET_BYTE_IDX(42)] >> 1 & 0x20;
+  ret[1] |= buffer[GET_BYTE_IDX(34)] >> 2 & 0x10;
+  ret[1] |= buffer[GET_BYTE_IDX(26)] >> 3 & 0x08;
+  ret[1] |= buffer[GET_BYTE_IDX(18)] >> 4 & 0x04;
 
-  ret[1] |= buffer[map_bit_pos_to_byte_idx(10)] >> 5 & 0x02;
-  ret[1] |= buffer[map_bit_pos_to_byte_idx(2)]  >> 6 & 0x01;
-  ret[2] |= buffer[map_bit_pos_to_byte_idx(59)] << 1 & 0x80;
-  ret[2] |= buffer[map_bit_pos_to_byte_idx(51)] << 1 & 0x40;
-  ret[2] |= buffer[map_bit_pos_to_byte_idx(43)]      & 0x20;
-  ret[2] |= buffer[map_bit_pos_to_byte_idx(35)] >> 1 & 0x10;
-  ret[2] |= buffer[map_bit_pos_to_byte_idx(27)] >> 2 & 0x08;
+  ret[1] |= buffer[GET_BYTE_IDX(10)] >> 5 & 0x02;
+  ret[1] |= buffer[GET_BYTE_IDX(2)]  >> 6 & 0x01;
+  ret[2] |= buffer[GET_BYTE_IDX(59)] << 1 & 0x80;
+  ret[2] |= buffer[GET_BYTE_IDX(51)] << 1 & 0x40;
+  ret[2] |= buffer[GET_BYTE_IDX(43)]      & 0x20;
+  ret[2] |= buffer[GET_BYTE_IDX(35)] >> 1 & 0x10;
+  ret[2] |= buffer[GET_BYTE_IDX(27)] >> 2 & 0x08;
 
-  ret[2] |= buffer[map_bit_pos_to_byte_idx(19)] >> 3 & 0x04;
-  ret[2] |= buffer[map_bit_pos_to_byte_idx(11)] >> 4 & 0x02;
-  ret[2] |= buffer[map_bit_pos_to_byte_idx(3)]  >> 5 & 0x01;
-  ret[3] |= buffer[map_bit_pos_to_byte_idx(60)] << 3 & 0x80;
-  ret[3] |= buffer[map_bit_pos_to_byte_idx(52)] << 2 & 0x40;
-  ret[3] |= buffer[map_bit_pos_to_byte_idx(44)] << 1 & 0x20;
-  ret[3] |= buffer[map_bit_pos_to_byte_idx(36)]      & 0x10;
+  ret[2] |= buffer[GET_BYTE_IDX(19)] >> 3 & 0x04;
+  ret[2] |= buffer[GET_BYTE_IDX(11)] >> 4 & 0x02;
+  ret[2] |= buffer[GET_BYTE_IDX(3)]  >> 5 & 0x01;
+  ret[3] |= buffer[GET_BYTE_IDX(60)] << 3 & 0x80;
+  ret[3] |= buffer[GET_BYTE_IDX(52)] << 2 & 0x40;
+  ret[3] |= buffer[GET_BYTE_IDX(44)] << 1 & 0x20;
+  ret[3] |= buffer[GET_BYTE_IDX(36)]      & 0x10;
 
-  ret[3] |= buffer[map_bit_pos_to_byte_idx(63)] << 2 & 0x08;
-  ret[3] |= buffer[map_bit_pos_to_byte_idx(55)] << 1 & 0x04;
-  ret[3] |= buffer[map_bit_pos_to_byte_idx(47)]      & 0x02;
-  ret[3] |= buffer[map_bit_pos_to_byte_idx(39)] >> 1 & 0x01;
-  ret[4] |= buffer[map_bit_pos_to_byte_idx(31)] << 6 & 0x80;
-  ret[4] |= buffer[map_bit_pos_to_byte_idx(23)] << 5 & 0x40;
-  ret[4] |= buffer[map_bit_pos_to_byte_idx(15)] << 4 & 0x20;
+  ret[3] |= buffer[GET_BYTE_IDX(63)] << 2 & 0x08;
+  ret[3] |= buffer[GET_BYTE_IDX(55)] << 1 & 0x04;
+  ret[3] |= buffer[GET_BYTE_IDX(47)]      & 0x02;
+  ret[3] |= buffer[GET_BYTE_IDX(39)] >> 1 & 0x01;
+  ret[4] |= buffer[GET_BYTE_IDX(31)] << 6 & 0x80;
+  ret[4] |= buffer[GET_BYTE_IDX(23)] << 5 & 0x40;
+  ret[4] |= buffer[GET_BYTE_IDX(15)] << 4 & 0x20;
 
-  ret[4] |= buffer[map_bit_pos_to_byte_idx(7)]  << 3 & 0x10;
-  ret[4] |= buffer[map_bit_pos_to_byte_idx(62)] << 1 & 0x08;
-  ret[4] |= buffer[map_bit_pos_to_byte_idx(54)]      & 0x04;
-  ret[4] |= buffer[map_bit_pos_to_byte_idx(46)] >> 1 & 0x02;
-  ret[4] |= buffer[map_bit_pos_to_byte_idx(38)] >> 2 & 0x01;
-  ret[5] |= buffer[map_bit_pos_to_byte_idx(30)] << 5 & 0x80;
-  ret[5] |= buffer[map_bit_pos_to_byte_idx(22)] << 4 & 0x40;
+  ret[4] |= buffer[GET_BYTE_IDX(7)]  << 3 & 0x10;
+  ret[4] |= buffer[GET_BYTE_IDX(62)] << 1 & 0x08;
+  ret[4] |= buffer[GET_BYTE_IDX(54)]      & 0x04;
+  ret[4] |= buffer[GET_BYTE_IDX(46)] >> 1 & 0x02;
+  ret[4] |= buffer[GET_BYTE_IDX(38)] >> 2 & 0x01;
+  ret[5] |= buffer[GET_BYTE_IDX(30)] << 5 & 0x80;
+  ret[5] |= buffer[GET_BYTE_IDX(22)] << 4 & 0x40;
 
-  ret[5] |= buffer[map_bit_pos_to_byte_idx(14)] << 3 & 0x20;
-  ret[5] |= buffer[map_bit_pos_to_byte_idx(6)]  << 2 & 0x10;
-  ret[5] |= buffer[map_bit_pos_to_byte_idx(61)]      & 0x08;
-  ret[5] |= buffer[map_bit_pos_to_byte_idx(53)] >> 1 & 0x04;
-  ret[5] |= buffer[map_bit_pos_to_byte_idx(45)] >> 2 & 0x02;
-  ret[5] |= buffer[map_bit_pos_to_byte_idx(37)] >> 3 & 0x01;
-  ret[6] |= buffer[map_bit_pos_to_byte_idx(29)] << 4 & 0x80;
+  ret[5] |= buffer[GET_BYTE_IDX(14)] << 3 & 0x20;
+  ret[5] |= buffer[GET_BYTE_IDX(6)]  << 2 & 0x10;
+  ret[5] |= buffer[GET_BYTE_IDX(61)]      & 0x08;
+  ret[5] |= buffer[GET_BYTE_IDX(53)] >> 1 & 0x04;
+  ret[5] |= buffer[GET_BYTE_IDX(45)] >> 2 & 0x02;
+  ret[5] |= buffer[GET_BYTE_IDX(37)] >> 3 & 0x01;
+  ret[6] |= buffer[GET_BYTE_IDX(29)] << 4 & 0x80;
 
-  ret[6] |= buffer[map_bit_pos_to_byte_idx(21)] << 3 & 0x40;
-  ret[6] |= buffer[map_bit_pos_to_byte_idx(13)] << 2 & 0x20;
-  ret[6] |= buffer[map_bit_pos_to_byte_idx(5)]  << 1 & 0x10;
-  ret[6] |= buffer[map_bit_pos_to_byte_idx(28)] >> 1 & 0x08;
-  ret[6] |= buffer[map_bit_pos_to_byte_idx(20)] >> 2 & 0x04;
-  ret[6] |= buffer[map_bit_pos_to_byte_idx(12)] >> 3 & 0x02;
-  ret[6] |= buffer[map_bit_pos_to_byte_idx(4)]  >> 4 & 0x01;
+  ret[6] |= buffer[GET_BYTE_IDX(21)] << 3 & 0x40;
+  ret[6] |= buffer[GET_BYTE_IDX(13)] << 2 & 0x20;
+  ret[6] |= buffer[GET_BYTE_IDX(5)]  << 1 & 0x10;
+  ret[6] |= buffer[GET_BYTE_IDX(28)] >> 1 & 0x08;
+  ret[6] |= buffer[GET_BYTE_IDX(20)] >> 2 & 0x04;
+  ret[6] |= buffer[GET_BYTE_IDX(12)] >> 3 & 0x02;
+  ret[6] |= buffer[GET_BYTE_IDX(4)]  >> 4 & 0x01;
 }
 
 static void key_pc2(const uint8_t * const buffer, uint8_t *ret)
@@ -378,61 +308,61 @@ static void key_pc2(const uint8_t * const buffer, uint8_t *ret)
    *
    */
 
-  ret[0] |= buffer[map_bit_pos_to_byte_idx(14)] << 5 & 0x80;
-  ret[0] |= buffer[map_bit_pos_to_byte_idx(17)] >> 1 & 0x40;
-  ret[0] |= buffer[map_bit_pos_to_byte_idx(11)]      & 0x20;
-  ret[0] |= buffer[map_bit_pos_to_byte_idx(24)] << 4 & 0x10;
-  ret[0] |= buffer[map_bit_pos_to_byte_idx(1) ] >> 4 & 0x08;
-  ret[0] |= buffer[map_bit_pos_to_byte_idx(5) ] >> 1 & 0x04;
+  ret[0] |= buffer[GET_BYTE_IDX(14)] << 5 & 0x80;
+  ret[0] |= buffer[GET_BYTE_IDX(17)] >> 1 & 0x40;
+  ret[0] |= buffer[GET_BYTE_IDX(11)]      & 0x20;
+  ret[0] |= buffer[GET_BYTE_IDX(24)] << 4 & 0x10;
+  ret[0] |= buffer[GET_BYTE_IDX(1) ] >> 4 & 0x08;
+  ret[0] |= buffer[GET_BYTE_IDX(5) ] >> 1 & 0x04;
 
-  ret[0] |= buffer[map_bit_pos_to_byte_idx(3) ] >> 4 & 0x02;
-  ret[0] |= buffer[map_bit_pos_to_byte_idx(28)] >> 4 & 0x01;
-  ret[1] |= buffer[map_bit_pos_to_byte_idx(15)] << 6 & 0x80;
-  ret[1] |= buffer[map_bit_pos_to_byte_idx(6 )] << 4 & 0x40;
-  ret[1] |= buffer[map_bit_pos_to_byte_idx(21)] << 2 & 0x20;
-  ret[1] |= buffer[map_bit_pos_to_byte_idx(10)] >> 2 & 0x10;
+  ret[0] |= buffer[GET_BYTE_IDX(3) ] >> 4 & 0x02;
+  ret[0] |= buffer[GET_BYTE_IDX(28)] >> 4 & 0x01;
+  ret[1] |= buffer[GET_BYTE_IDX(15)] << 6 & 0x80;
+  ret[1] |= buffer[GET_BYTE_IDX(6 )] << 4 & 0x40;
+  ret[1] |= buffer[GET_BYTE_IDX(21)] << 2 & 0x20;
+  ret[1] |= buffer[GET_BYTE_IDX(10)] >> 2 & 0x10;
 
-  ret[1] |= buffer[map_bit_pos_to_byte_idx(23)] << 2 & 0x08;
-  ret[1] |= buffer[map_bit_pos_to_byte_idx(19)] >> 3 & 0x04;
-  ret[1] |= buffer[map_bit_pos_to_byte_idx(12)] >> 3 & 0x02;
-  ret[1] |= buffer[map_bit_pos_to_byte_idx(4 )] >> 4 & 0x01;
-  ret[2] |= buffer[map_bit_pos_to_byte_idx(26)] << 1 & 0x80;
-  ret[2] |= buffer[map_bit_pos_to_byte_idx(8 )] << 6 & 0x40;
+  ret[1] |= buffer[GET_BYTE_IDX(23)] << 2 & 0x08;
+  ret[1] |= buffer[GET_BYTE_IDX(19)] >> 3 & 0x04;
+  ret[1] |= buffer[GET_BYTE_IDX(12)] >> 3 & 0x02;
+  ret[1] |= buffer[GET_BYTE_IDX(4 )] >> 4 & 0x01;
+  ret[2] |= buffer[GET_BYTE_IDX(26)] << 1 & 0x80;
+  ret[2] |= buffer[GET_BYTE_IDX(8 )] << 6 & 0x40;
 
-  ret[2] |= buffer[map_bit_pos_to_byte_idx(16)] << 5 & 0x20;
-  ret[2] |= buffer[map_bit_pos_to_byte_idx(7 )] << 3 & 0x10;
-  ret[2] |= buffer[map_bit_pos_to_byte_idx(27)] >> 2 & 0x08;
-  ret[2] |= buffer[map_bit_pos_to_byte_idx(20)] >> 2 & 0x04;
-  ret[2] |= buffer[map_bit_pos_to_byte_idx(13)] >> 2 & 0x02;
-  ret[2] |= buffer[map_bit_pos_to_byte_idx(2 )] >> 6 & 0x01;
+  ret[2] |= buffer[GET_BYTE_IDX(16)] << 5 & 0x20;
+  ret[2] |= buffer[GET_BYTE_IDX(7 )] << 3 & 0x10;
+  ret[2] |= buffer[GET_BYTE_IDX(27)] >> 2 & 0x08;
+  ret[2] |= buffer[GET_BYTE_IDX(20)] >> 2 & 0x04;
+  ret[2] |= buffer[GET_BYTE_IDX(13)] >> 2 & 0x02;
+  ret[2] |= buffer[GET_BYTE_IDX(2 )] >> 6 & 0x01;
 
-  ret[3] |= buffer[map_bit_pos_to_byte_idx(41)]      & 0x80;
-  ret[3] |= buffer[map_bit_pos_to_byte_idx(52)] << 2 & 0x40;
-  ret[3] |= buffer[map_bit_pos_to_byte_idx(31)] << 4 & 0x20;
-  ret[3] |= buffer[map_bit_pos_to_byte_idx(37)] << 1 & 0x10;
-  ret[3] |= buffer[map_bit_pos_to_byte_idx(47)] << 2 & 0x08;
-  ret[3] |= buffer[map_bit_pos_to_byte_idx(55)] << 1 & 0x04;
+  ret[3] |= buffer[GET_BYTE_IDX(41)]      & 0x80;
+  ret[3] |= buffer[GET_BYTE_IDX(52)] << 2 & 0x40;
+  ret[3] |= buffer[GET_BYTE_IDX(31)] << 4 & 0x20;
+  ret[3] |= buffer[GET_BYTE_IDX(37)] << 1 & 0x10;
+  ret[3] |= buffer[GET_BYTE_IDX(47)] << 2 & 0x08;
+  ret[3] |= buffer[GET_BYTE_IDX(55)] << 1 & 0x04;
   
-  ret[3] |= buffer[map_bit_pos_to_byte_idx(30)] >> 1 & 0x02;
-  ret[3] |= buffer[map_bit_pos_to_byte_idx(40)]      & 0x01;
-  ret[4] |= buffer[map_bit_pos_to_byte_idx(51)] << 2 & 0x80;
-  ret[4] |= buffer[map_bit_pos_to_byte_idx(45)] << 3 & 0x40;
-  ret[4] |= buffer[map_bit_pos_to_byte_idx(33)] >> 2 & 0x20;
-  ret[4] |= buffer[map_bit_pos_to_byte_idx(48)] << 4 & 0x10;
+  ret[3] |= buffer[GET_BYTE_IDX(30)] >> 1 & 0x02;
+  ret[3] |= buffer[GET_BYTE_IDX(40)]      & 0x01;
+  ret[4] |= buffer[GET_BYTE_IDX(51)] << 2 & 0x80;
+  ret[4] |= buffer[GET_BYTE_IDX(45)] << 3 & 0x40;
+  ret[4] |= buffer[GET_BYTE_IDX(33)] >> 2 & 0x20;
+  ret[4] |= buffer[GET_BYTE_IDX(48)] << 4 & 0x10;
 
-  ret[4] |= buffer[map_bit_pos_to_byte_idx(44)] >> 1 & 0x08;
-  ret[4] |= buffer[map_bit_pos_to_byte_idx(49)] >> 5 & 0x04;
-  ret[4] |= buffer[map_bit_pos_to_byte_idx(39)]      & 0x02;
-  ret[4] |= buffer[map_bit_pos_to_byte_idx(56)]      & 0x01;
-  ret[5] |= buffer[map_bit_pos_to_byte_idx(34)] << 1 & 0x80;
-  ret[5] |= buffer[map_bit_pos_to_byte_idx(53)] << 3 & 0x40;
+  ret[4] |= buffer[GET_BYTE_IDX(44)] >> 1 & 0x08;
+  ret[4] |= buffer[GET_BYTE_IDX(49)] >> 5 & 0x04;
+  ret[4] |= buffer[GET_BYTE_IDX(39)]      & 0x02;
+  ret[4] |= buffer[GET_BYTE_IDX(56)]      & 0x01;
+  ret[5] |= buffer[GET_BYTE_IDX(34)] << 1 & 0x80;
+  ret[5] |= buffer[GET_BYTE_IDX(53)] << 3 & 0x40;
 
-  ret[5] |= buffer[map_bit_pos_to_byte_idx(46)] << 3 & 0x20;
-  ret[5] |= buffer[map_bit_pos_to_byte_idx(42)] >> 2 & 0x10;
-  ret[5] |= buffer[map_bit_pos_to_byte_idx(50)] >> 3 & 0x08;
-  ret[5] |= buffer[map_bit_pos_to_byte_idx(36)] >> 2 & 0x04;
-  ret[5] |= buffer[map_bit_pos_to_byte_idx(29)] >> 2 & 0x02;
-  ret[5] |= buffer[map_bit_pos_to_byte_idx(32)]      & 0x01;
+  ret[5] |= buffer[GET_BYTE_IDX(46)] << 3 & 0x20;
+  ret[5] |= buffer[GET_BYTE_IDX(42)] >> 2 & 0x10;
+  ret[5] |= buffer[GET_BYTE_IDX(50)] >> 3 & 0x08;
+  ret[5] |= buffer[GET_BYTE_IDX(36)] >> 2 & 0x04;
+  ret[5] |= buffer[GET_BYTE_IDX(29)] >> 2 & 0x02;
+  ret[5] |= buffer[GET_BYTE_IDX(32)]      & 0x01;
 }
 
 void static shift_left_cd_mv_bit(uint8_t *buffer, size_t size)
@@ -482,9 +412,7 @@ static key_rotation_t key_rotation(const uint8_t * const key_pc1_buffer)
   key_rotation_t ret_subkeys = init_key_rot();
   if(!ret_subkeys.subkeys)
     return ret_subkeys;
-
-   
-  char title_str[10 + 1] = {0};
+ 
   for(size_t i = 1; i <= 16; ++i)
   {
     if(i == 1 || i == 2 || i == 9 || i == 16)
@@ -505,6 +433,7 @@ static key_rotation_t key_rotation(const uint8_t * const key_pc1_buffer)
     }
 
 #ifdef LOG_KEY_CD_DETAILS
+    char title_str[10 + 1] = {0};
     sprintf(title_str, "C%lu =", i);
     print_bin_simple(title_str, c_i, 4);
     
@@ -512,7 +441,6 @@ static key_rotation_t key_rotation(const uint8_t * const key_pc1_buffer)
 
     sprintf(title_str, "D%lu =", i);
     print_bin_simple(title_str, d_i, 4);
-    memset(title_str, 0x00, sizeof title_str);
 #endif
 
     const uint8_t cd[7] =
@@ -562,77 +490,77 @@ static void msg_ip(const uint8_t * const buffer, uint8_t *ret)
    *
    */
 
-  ret[0] |= buffer[map_bit_pos_to_byte_idx(58)] << 2 & 0x80;
-  ret[0] |= buffer[map_bit_pos_to_byte_idx(50)]      & 0x40;
-  ret[0] |= buffer[map_bit_pos_to_byte_idx(42)] >> 1 & 0x20;
-  ret[0] |= buffer[map_bit_pos_to_byte_idx(34)] >> 2 & 0x10;
-  ret[0] |= buffer[map_bit_pos_to_byte_idx(26)] >> 3 & 0x08;
-  ret[0] |= buffer[map_bit_pos_to_byte_idx(18)] >> 4 & 0x04;
-  ret[0] |= buffer[map_bit_pos_to_byte_idx(10)] >> 5 & 0x02;
-  ret[0] |= buffer[map_bit_pos_to_byte_idx(2) ] >> 6 & 0x01;
+  ret[0] |= buffer[GET_BYTE_IDX(58)] << 2 & 0x80;
+  ret[0] |= buffer[GET_BYTE_IDX(50)]      & 0x40;
+  ret[0] |= buffer[GET_BYTE_IDX(42)] >> 1 & 0x20;
+  ret[0] |= buffer[GET_BYTE_IDX(34)] >> 2 & 0x10;
+  ret[0] |= buffer[GET_BYTE_IDX(26)] >> 3 & 0x08;
+  ret[0] |= buffer[GET_BYTE_IDX(18)] >> 4 & 0x04;
+  ret[0] |= buffer[GET_BYTE_IDX(10)] >> 5 & 0x02;
+  ret[0] |= buffer[GET_BYTE_IDX(2) ] >> 6 & 0x01;
 
-  ret[1] |= buffer[map_bit_pos_to_byte_idx(60)] << 3 & 0x80;
-  ret[1] |= buffer[map_bit_pos_to_byte_idx(52)] << 2 & 0x40;
-  ret[1] |= buffer[map_bit_pos_to_byte_idx(44)] << 1 & 0x20;
-  ret[1] |= buffer[map_bit_pos_to_byte_idx(36)]      & 0x10;
-  ret[1] |= buffer[map_bit_pos_to_byte_idx(28)] >> 1 & 0x08;
-  ret[1] |= buffer[map_bit_pos_to_byte_idx(20)] >> 2 & 0x04;
-  ret[1] |= buffer[map_bit_pos_to_byte_idx(12)] >> 3 & 0x02;
-  ret[1] |= buffer[map_bit_pos_to_byte_idx(4) ] >> 4 & 0x01;
+  ret[1] |= buffer[GET_BYTE_IDX(60)] << 3 & 0x80;
+  ret[1] |= buffer[GET_BYTE_IDX(52)] << 2 & 0x40;
+  ret[1] |= buffer[GET_BYTE_IDX(44)] << 1 & 0x20;
+  ret[1] |= buffer[GET_BYTE_IDX(36)]      & 0x10;
+  ret[1] |= buffer[GET_BYTE_IDX(28)] >> 1 & 0x08;
+  ret[1] |= buffer[GET_BYTE_IDX(20)] >> 2 & 0x04;
+  ret[1] |= buffer[GET_BYTE_IDX(12)] >> 3 & 0x02;
+  ret[1] |= buffer[GET_BYTE_IDX(4) ] >> 4 & 0x01;
 
-  ret[2] |= buffer[map_bit_pos_to_byte_idx(62)] << 5 & 0x80;
-  ret[2] |= buffer[map_bit_pos_to_byte_idx(54)] << 4 & 0x40;
-  ret[2] |= buffer[map_bit_pos_to_byte_idx(46)] << 3 & 0x20;
-  ret[2] |= buffer[map_bit_pos_to_byte_idx(38)] << 2 & 0x10;
-  ret[2] |= buffer[map_bit_pos_to_byte_idx(30)] << 1 & 0x08;
-  ret[2] |= buffer[map_bit_pos_to_byte_idx(22)]      & 0x04;
-  ret[2] |= buffer[map_bit_pos_to_byte_idx(14)] >> 1 & 0x02;
-  ret[2] |= buffer[map_bit_pos_to_byte_idx(6) ] >> 2 & 0x01;
+  ret[2] |= buffer[GET_BYTE_IDX(62)] << 5 & 0x80;
+  ret[2] |= buffer[GET_BYTE_IDX(54)] << 4 & 0x40;
+  ret[2] |= buffer[GET_BYTE_IDX(46)] << 3 & 0x20;
+  ret[2] |= buffer[GET_BYTE_IDX(38)] << 2 & 0x10;
+  ret[2] |= buffer[GET_BYTE_IDX(30)] << 1 & 0x08;
+  ret[2] |= buffer[GET_BYTE_IDX(22)]      & 0x04;
+  ret[2] |= buffer[GET_BYTE_IDX(14)] >> 1 & 0x02;
+  ret[2] |= buffer[GET_BYTE_IDX(6) ] >> 2 & 0x01;
 
-  ret[3] |= buffer[map_bit_pos_to_byte_idx(64)] << 7 & 0x80;
-  ret[3] |= buffer[map_bit_pos_to_byte_idx(56)] << 6 & 0x40;
-  ret[3] |= buffer[map_bit_pos_to_byte_idx(48)] << 5 & 0x20;
-  ret[3] |= buffer[map_bit_pos_to_byte_idx(40)] << 4 & 0x10;
-  ret[3] |= buffer[map_bit_pos_to_byte_idx(32)] << 3 & 0x08;
-  ret[3] |= buffer[map_bit_pos_to_byte_idx(24)] << 2 & 0x04;
-  ret[3] |= buffer[map_bit_pos_to_byte_idx(16)] << 1 & 0x02;
-  ret[3] |= buffer[map_bit_pos_to_byte_idx(8) ]      & 0x01;
+  ret[3] |= buffer[GET_BYTE_IDX(64)] << 7 & 0x80;
+  ret[3] |= buffer[GET_BYTE_IDX(56)] << 6 & 0x40;
+  ret[3] |= buffer[GET_BYTE_IDX(48)] << 5 & 0x20;
+  ret[3] |= buffer[GET_BYTE_IDX(40)] << 4 & 0x10;
+  ret[3] |= buffer[GET_BYTE_IDX(32)] << 3 & 0x08;
+  ret[3] |= buffer[GET_BYTE_IDX(24)] << 2 & 0x04;
+  ret[3] |= buffer[GET_BYTE_IDX(16)] << 1 & 0x02;
+  ret[3] |= buffer[GET_BYTE_IDX(8) ]      & 0x01;
 
-  ret[4] |= buffer[map_bit_pos_to_byte_idx(57)]      & 0x80;
-  ret[4] |= buffer[map_bit_pos_to_byte_idx(49)] >> 1 & 0x40;
-  ret[4] |= buffer[map_bit_pos_to_byte_idx(41)] >> 2 & 0x20;
-  ret[4] |= buffer[map_bit_pos_to_byte_idx(33)] >> 3 & 0x10;
-  ret[4] |= buffer[map_bit_pos_to_byte_idx(25)] >> 4 & 0x08;
-  ret[4] |= buffer[map_bit_pos_to_byte_idx(17)] >> 5 & 0x04;
-  ret[4] |= buffer[map_bit_pos_to_byte_idx(9) ] >> 6 & 0x02;
-  ret[4] |= buffer[map_bit_pos_to_byte_idx(1) ] >> 7 & 0x01;
+  ret[4] |= buffer[GET_BYTE_IDX(57)]      & 0x80;
+  ret[4] |= buffer[GET_BYTE_IDX(49)] >> 1 & 0x40;
+  ret[4] |= buffer[GET_BYTE_IDX(41)] >> 2 & 0x20;
+  ret[4] |= buffer[GET_BYTE_IDX(33)] >> 3 & 0x10;
+  ret[4] |= buffer[GET_BYTE_IDX(25)] >> 4 & 0x08;
+  ret[4] |= buffer[GET_BYTE_IDX(17)] >> 5 & 0x04;
+  ret[4] |= buffer[GET_BYTE_IDX(9) ] >> 6 & 0x02;
+  ret[4] |= buffer[GET_BYTE_IDX(1) ] >> 7 & 0x01;
 
-  ret[5] |= buffer[map_bit_pos_to_byte_idx(59)] << 2 & 0x80;
-  ret[5] |= buffer[map_bit_pos_to_byte_idx(51)] << 1 & 0x40;
-  ret[5] |= buffer[map_bit_pos_to_byte_idx(43)]      & 0x20;
-  ret[5] |= buffer[map_bit_pos_to_byte_idx(35)] >> 1 & 0x10;
-  ret[5] |= buffer[map_bit_pos_to_byte_idx(27)] >> 2 & 0x08;
-  ret[5] |= buffer[map_bit_pos_to_byte_idx(19)] >> 3 & 0x04;
-  ret[5] |= buffer[map_bit_pos_to_byte_idx(11)] >> 4 & 0x02;
-  ret[5] |= buffer[map_bit_pos_to_byte_idx(3) ] >> 5 & 0x01;
+  ret[5] |= buffer[GET_BYTE_IDX(59)] << 2 & 0x80;
+  ret[5] |= buffer[GET_BYTE_IDX(51)] << 1 & 0x40;
+  ret[5] |= buffer[GET_BYTE_IDX(43)]      & 0x20;
+  ret[5] |= buffer[GET_BYTE_IDX(35)] >> 1 & 0x10;
+  ret[5] |= buffer[GET_BYTE_IDX(27)] >> 2 & 0x08;
+  ret[5] |= buffer[GET_BYTE_IDX(19)] >> 3 & 0x04;
+  ret[5] |= buffer[GET_BYTE_IDX(11)] >> 4 & 0x02;
+  ret[5] |= buffer[GET_BYTE_IDX(3) ] >> 5 & 0x01;
   
-  ret[6] |= buffer[map_bit_pos_to_byte_idx(61)] << 4 & 0x80;
-  ret[6] |= buffer[map_bit_pos_to_byte_idx(53)] << 3 & 0x40;
-  ret[6] |= buffer[map_bit_pos_to_byte_idx(45)] << 2 & 0x20;
-  ret[6] |= buffer[map_bit_pos_to_byte_idx(37)] << 1 & 0x10;
-  ret[6] |= buffer[map_bit_pos_to_byte_idx(29)]      & 0x08;
-  ret[6] |= buffer[map_bit_pos_to_byte_idx(21)] >> 1 & 0x04;
-  ret[6] |= buffer[map_bit_pos_to_byte_idx(13)] >> 2 & 0x02;
-  ret[6] |= buffer[map_bit_pos_to_byte_idx(5) ] >> 3 & 0x01;
+  ret[6] |= buffer[GET_BYTE_IDX(61)] << 4 & 0x80;
+  ret[6] |= buffer[GET_BYTE_IDX(53)] << 3 & 0x40;
+  ret[6] |= buffer[GET_BYTE_IDX(45)] << 2 & 0x20;
+  ret[6] |= buffer[GET_BYTE_IDX(37)] << 1 & 0x10;
+  ret[6] |= buffer[GET_BYTE_IDX(29)]      & 0x08;
+  ret[6] |= buffer[GET_BYTE_IDX(21)] >> 1 & 0x04;
+  ret[6] |= buffer[GET_BYTE_IDX(13)] >> 2 & 0x02;
+  ret[6] |= buffer[GET_BYTE_IDX(5) ] >> 3 & 0x01;
 
-  ret[7] |= buffer[map_bit_pos_to_byte_idx(63)] << 6 & 0x80;
-  ret[7] |= buffer[map_bit_pos_to_byte_idx(55)] << 5 & 0x40;
-  ret[7] |= buffer[map_bit_pos_to_byte_idx(47)] << 4 & 0x20;
-  ret[7] |= buffer[map_bit_pos_to_byte_idx(39)] << 3 & 0x10;
-  ret[7] |= buffer[map_bit_pos_to_byte_idx(31)] << 2 & 0x08;
-  ret[7] |= buffer[map_bit_pos_to_byte_idx(23)] << 1 & 0x04;
-  ret[7] |= buffer[map_bit_pos_to_byte_idx(15)]      & 0x02;
-  ret[7] |= buffer[map_bit_pos_to_byte_idx(7) ] >> 1 & 0x01;
+  ret[7] |= buffer[GET_BYTE_IDX(63)] << 6 & 0x80;
+  ret[7] |= buffer[GET_BYTE_IDX(55)] << 5 & 0x40;
+  ret[7] |= buffer[GET_BYTE_IDX(47)] << 4 & 0x20;
+  ret[7] |= buffer[GET_BYTE_IDX(39)] << 3 & 0x10;
+  ret[7] |= buffer[GET_BYTE_IDX(31)] << 2 & 0x08;
+  ret[7] |= buffer[GET_BYTE_IDX(23)] << 1 & 0x04;
+  ret[7] |= buffer[GET_BYTE_IDX(15)]      & 0x02;
+  ret[7] |= buffer[GET_BYTE_IDX(7) ] >> 1 & 0x01;
 }
 
 static void msg_get_LR(const uint8_t * const ipbuffer, uint8_t *retL, uint8_t *retR)
@@ -695,7 +623,7 @@ int main(int argc, char **argv)
   }
 
 #ifdef LOG_KEY_DETAILS
-  print_key_rot(key_rot);
+  key_rotation_print(key_rot);
 #endif
   
   // single block msg handling
@@ -727,7 +655,6 @@ int main(int argc, char **argv)
   print_bin_with_title("R0 =", R, MSG_LR_SIZE, 4, 0); 
 #endif
 
-
 msg_end:
   free_key_rot(key_rot);
   if(msg_file_buffer)
@@ -738,4 +665,79 @@ key_end:
     free(key_file_buffer);
  
   return 0;
+}
+
+void print_bin_detail(const uint8_t * const buffer, size_t size, size_t bit_word_len, size_t skip_beg)
+{
+  // this would have been much simpler if I wouldn't need to print various bit word bytes from time to time
+
+  const size_t str_len = size * 8 * sizeof(char);
+  char *str = (char*)malloc(str_len);
+  for(size_t i = 0; i < size; ++i)
+  {
+    const uint8_t bt = buffer[i];
+    const size_t idx = i * 8;
+
+    str[idx + 0] = bt & 0x80 ? '1' : '0';
+    str[idx + 1] = bt & 0x40 ? '1' : '0';
+    str[idx + 2] = bt & 0x20 ? '1' : '0';
+    str[idx + 3] = bt & 0x10 ? '1' : '0';
+    str[idx + 4] = bt & 0x08 ? '1' : '0';
+    str[idx + 5] = bt & 0x04 ? '1' : '0';
+    str[idx + 6] = bt & 0x02 ? '1' : '0';
+    str[idx + 7] = bt & 0x01 ? '1' : '0'; 
+  }
+
+  size_t cnt = 0;
+  for(size_t i = 0; i < str_len; ++i)
+  {
+    if(i < skip_beg)
+      continue;
+
+    if(cnt % bit_word_len == 0 && cnt != 0)
+      printf(" ");
+    
+    printf("%c", str[i]);
+    ++cnt;
+  }
+  
+  free(str);
+  printf("\n"); 
+}
+
+void print_bin_with_title(const char *title, const uint8_t * const buffer, size_t size, size_t bit_word_len, size_t skip_beg)
+{
+  printf("%s ", title);
+  print_bin_detail(buffer, size, bit_word_len, skip_beg);
+}
+
+void print_bin_simple(const char *title, const uint8_t * const buffer, size_t size)
+{
+  print_bin_with_title(title, buffer, size, size * 8, 0);
+}
+
+void print_bin_bits(const char *title, const uint8_t * const buffer, size_t size, size_t bit_word_len)
+{
+  print_bin_with_title(title, buffer, size, bit_word_len, 0);
+}
+
+void print_bin_8bit(const char *title, const uint8_t * const buffer, size_t size)
+{
+  print_bin_bits(title, buffer, size, 8);
+}
+
+void print_buffer(const char * const buffer, unsigned long size)
+{
+  for(unsigned long i = 0; i < size; ++i)
+   printf("%c", buffer[i]);
+
+  printf("\n"); 
+}
+
+void print_as_hexstr(const uint8_t * const buffer, size_t size)
+{
+  for(size_t i = 0; i < size; ++i)
+    printf("%2x ", buffer[i]);
+
+  printf("\n");
 }
