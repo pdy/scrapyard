@@ -11,15 +11,16 @@
 #define KEY_HEXSTR_LEN (KEY_SIZE * 2)
 #define KEY_ITER_SIZE KEY_PC2_SIZE
 #define KEY_SUBKEYS_NUM 16
+#define E_BIT_SIZE 6
 
 #define MSG_SINGLE_BLOCK_SIZE 8
 #define MSG_IP_SIZE 8
 #define MSG_LR_SIZE 4
 
-#define LOG_KEY_DETAILS
+//#define LOG_KEY_DETAILS
 //#define LOG_KEY_CD_DETAILS
 //#define LOG_MSG_DETAILS
-//#define MSG_LR_DETAILS
+#define LOG_MSG_LR_DETAILS
 
 #define GET_BYTE_IDX(bit_pos) ((size_t)(bit_pos - 1) / 8)
 
@@ -40,6 +41,7 @@ typedef struct key_rotation_iterator_t
 {
   uint8_t *ptr;
   size_t size;
+  size_t it;
 
 } key_rotation_iterator_t;
 
@@ -61,14 +63,15 @@ static key_rotation_iterator_t key_get_iteration(key_rotation_t key_rot, size_t 
 {
   if(!iteration || iteration > KEY_SUBKEYS_NUM)
   {
-    const key_rotation_iterator_t ret = { .ptr = NULL, .size = 0};
+    const key_rotation_iterator_t ret = { .ptr = NULL, .size = 0, .it = 0};
     return ret;
   }
 
   const key_rotation_iterator_t it = 
   {
     .ptr = key_rot.subkeys + ((iteration - 1) * KEY_ITER_SIZE),
-    .size = KEY_ITER_SIZE
+    .size = KEY_ITER_SIZE,
+    .it = iteration
   };
 
   return it;
@@ -564,9 +567,87 @@ static void copy_LR(const uint8_t * const from, uint8_t *to)
   memcpy(to, from, MSG_LR_SIZE);
 }
 
+static void msg_ebit_selection(const uint8_t * const R, uint8_t *ret)
+{
+  /*
+    32     1    2     3     4    5
+     4     5    6     7     8    9
+     8     9   10    11    12   13
+    12    13   14    15    16   17
+    16    17   18    19    20   21
+    20    21   22    23    24   25
+    24    25   26    27    28   29
+    28    29   30    31    32    1
+  */
+  
+  ret[0] |= R[GET_BYTE_IDX(32)] << 7 & 0x80;
+  ret[0] |= R[GET_BYTE_IDX(1) ] >> 1 & 0x40;
+  ret[0] |= R[GET_BYTE_IDX(2) ] >> 1 & 0x20;
+  ret[0] |= R[GET_BYTE_IDX(3) ] >> 1 & 0x10;
+  ret[0] |= R[GET_BYTE_IDX(4) ] >> 1 & 0x08;
+  ret[0] |= R[GET_BYTE_IDX(5) ] >> 1 & 0x04;
+
+  ret[0] |= R[GET_BYTE_IDX(4) ] >> 3 & 0x02;
+  ret[0] |= R[GET_BYTE_IDX(5) ] >> 3 & 0x01;
+  ret[1] |= R[GET_BYTE_IDX(6) ] << 5 & 0x80;
+  ret[1] |= R[GET_BYTE_IDX(7) ] << 5 & 0x40;
+  ret[1] |= R[GET_BYTE_IDX(8) ] << 5 & 0x20;
+  ret[1] |= R[GET_BYTE_IDX(9) ] >> 3 & 0x10;
+
+  ret[1] |= R[GET_BYTE_IDX(8) ] << 3 & 0x08;
+  ret[1] |= R[GET_BYTE_IDX(9) ] >> 5 & 0x04;
+  ret[1] |= R[GET_BYTE_IDX(10)] >> 5 & 0x02;
+  ret[1] |= R[GET_BYTE_IDX(11)] >> 5 & 0x01;
+  ret[2] |= R[GET_BYTE_IDX(12)] >> 1 & 0x80;
+  ret[2] |= R[GET_BYTE_IDX(13)] >> 1 & 0x40;
+  
+  ret[2] |= R[GET_BYTE_IDX(12)] >> 3 & 0x20;
+  ret[2] |= R[GET_BYTE_IDX(13)] >> 3 & 0x10;
+  ret[2] |= R[GET_BYTE_IDX(14)] << 1 & 0x08;
+  ret[2] |= R[GET_BYTE_IDX(15)] << 1 & 0x04;
+  ret[2] |= R[GET_BYTE_IDX(16)] << 1 & 0x02;
+  ret[2] |= R[GET_BYTE_IDX(17)] >> 7 & 0x01;
+
+  ret[3] |= R[GET_BYTE_IDX(16)] << 7 & 0x80;
+  ret[3] |= R[GET_BYTE_IDX(17)] >> 1 & 0x40;
+  ret[3] |= R[GET_BYTE_IDX(18)] >> 1 & 0x20;
+  ret[3] |= R[GET_BYTE_IDX(19)] >> 1 & 0x10;
+  ret[3] |= R[GET_BYTE_IDX(20)] >> 1 & 0x08;
+  ret[3] |= R[GET_BYTE_IDX(21)] >> 1 & 0x04;
+
+  ret[3] |= R[GET_BYTE_IDX(20)] >> 3 & 0x02;
+  ret[3] |= R[GET_BYTE_IDX(21)] >> 3 & 0x01;
+  ret[4] |= R[GET_BYTE_IDX(22)] << 5 & 0x80;
+  ret[4] |= R[GET_BYTE_IDX(23)] << 5 & 0x40;
+  ret[4] |= R[GET_BYTE_IDX(24)] << 5 & 0x20;
+  ret[4] |= R[GET_BYTE_IDX(25)] >> 3 & 0x10;
+
+  ret[4] |= R[GET_BYTE_IDX(24)] << 3 & 0x08;
+  ret[4] |= R[GET_BYTE_IDX(25)] >> 5 & 0x04;
+  ret[4] |= R[GET_BYTE_IDX(26)] >> 5 & 0x02;
+  ret[4] |= R[GET_BYTE_IDX(27)] >> 5 & 0x01;
+  ret[5] |= R[GET_BYTE_IDX(28)] >> 1 & 0x80;
+  ret[5] |= R[GET_BYTE_IDX(29)] >> 1 & 0x40;
+
+  ret[5] |= R[GET_BYTE_IDX(28)] >> 3 & 0x20;
+  ret[5] |= R[GET_BYTE_IDX(29)] >> 3 & 0x10;
+  ret[5] |= R[GET_BYTE_IDX(30)] << 1 & 0x08;
+  ret[5] |= R[GET_BYTE_IDX(31)] << 1 & 0x04;
+  ret[5] |= R[GET_BYTE_IDX(32)] << 1 & 0x02;
+  ret[5] |= R[GET_BYTE_IDX(1) ] >> 7 & 0x01;
+}
+
 static void calc_Rn(const uint8_t * const L, const uint8_t * const R, key_rotation_iterator_t key_rot, uint8_t *out_R)
 {
-  
+  uint8_t e_bit[E_BIT_SIZE] = {0};
+  msg_ebit_selection(R, e_bit);
+
+#ifdef LOG_MSG_LR_DETAILS
+  const size_t num = key_rot.it - 1;
+  char title_str[10 + 1] = {0};
+  sprintf(title_str, "E%zu =", num);
+  print_bin_with_title(title_str, e_bit, E_BIT_SIZE, 6, 0); 
+#endif
 }
 
 int main(int argc, char **argv)
@@ -650,13 +731,13 @@ int main(int argc, char **argv)
 
   uint8_t L[MSG_LR_SIZE] = {0}, R[MSG_LR_SIZE] = {0};
   msg_get_LR(msg_ip_buff, L, R);
-#ifdef MSG_LR_DETAILS
+#ifdef LOG_MSG_LR_DETAILS
   print_bin_with_title("L0 =", L, MSG_LR_SIZE, 4, 0); 
   print_bin_with_title("R0 =", R, MSG_LR_SIZE, 4, 0); 
 #endif
 
   uint8_t R_tmp[MSG_LR_SIZE] = {0};
-  for(size_t i=1; i <= 16; ++i)
+  for(size_t i=1; i <= 1; ++i)
   {
     calc_Rn(L, R, key_get_iteration(key_rot, i), R_tmp);
 
