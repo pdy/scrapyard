@@ -31,8 +31,6 @@ void print_bin_8bit(const char *title, const uint8_t * const buffer, size_t size
 void print_buffer(const char * const buffer, unsigned long size);
 void print_as_hexstr(const uint8_t * const buffer, size_t size);
 
-static const char HEX_STR_CHARS[] = "0123456789AaBbCcDdEeFf";
-
 typedef struct key_rotation_t
 {
   uint8_t *subkeys;
@@ -134,26 +132,18 @@ static unsigned long read_whole_file(const char * const filename, char **ret)
   return actual_size;
 }
 
+static int is_hex_digit(char c)
+{
+  return (c >= '0' && c <='9') || ((c >= 'a' && c <='f') || (c >= 'A' && c <= 'F'));
+}
+
 static int is_valid_hex_str(const char * const buffer, size_t size)
 {
-  int is_in = 0;
   for(size_t i = 0; i < size; ++i)
-  {
-    is_in = 0;
-    for(size_t j = 0; j < sizeof(HEX_STR_CHARS); ++j)
-    {
-      if(buffer[i] == HEX_STR_CHARS[j])
-      {
-        is_in = 1;
-        break;
-      }
-    }
+    if(!is_hex_digit(buffer[i]))
+        return 0;
 
-    if(!is_in)
-      break;
-  }
-
-  return is_in;
+  return 1;
 }
 
 static uint8_t hex_char_map(char chr)
