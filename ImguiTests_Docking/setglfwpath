@@ -1,0 +1,8 @@
+#!/bin/bash
+
+if [ $# -ne 1 ]; then
+    echo "Invalid argument count. Need to pass glfw path as argument."
+    exit
+fi
+
+ln -s $1 ./glfw
