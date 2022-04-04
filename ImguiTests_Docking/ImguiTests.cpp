@@ -2,6 +2,7 @@
 #include "simplelog/simplelog.h"
 
 #include "include.h"
+#include "MyUi.h"
 
 
 static constexpr const char* programName = "GLFW window";
@@ -186,12 +187,7 @@ int main(int argc, char *argv[])
     //----Render--------------------------
     //************************************************
  
-    // feed inputs to dear imgui, start new frame
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
-    ImGui::NewFrame();
-    ImGui::ShowDemoWindow();
-    ImGui::ShowMetricsWindow();
+    renderUi({}); 
 
 
 
