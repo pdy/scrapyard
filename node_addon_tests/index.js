@@ -11,4 +11,5 @@ function substrRet(err, val)
 }
 
 hello_world.helloSubstr("text", 2, substrRet);
+hello_world.helloSubstr("text", -2, substrRet);
 hello_world.helloSubstr("text", 4, substrRet);

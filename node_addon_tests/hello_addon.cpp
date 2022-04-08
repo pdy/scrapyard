@@ -6,15 +6,18 @@ class DataProcessingAsyncWorker : public Napi::AsyncWorker
 {
 public:
   //
-  DataProcessingAsyncWorker(Napi::Function &callback, std::string str)
-    : AsyncWorker(callback), m_val{std::move(str)}
+  DataProcessingAsyncWorker(Napi::Function &callback, std::string str, int idx)
+    : AsyncWorker(callback), m_val{std::move(str)}, m_idx{idx}
   {}
 
   void Execute()
   {
-    if(m_val.empty())
-      SetError("Empty string");
-
+    if(m_idx < 0)
+      Napi::AsyncWorker::SetError("Negative idx");
+    else if(static_cast<size_t>(m_idx) >= m_val.size() - 1)
+      Napi::AsyncWorker::SetError("Idx too high");
+    else
+      m_val = m_val.substr(static_cast<size_t>(m_idx));
   }
 
   void OnOK()
@@ -24,6 +27,7 @@ public:
 
 private:
   std::string m_val;
+  int m_idx;
 };
 
 } // namespace
@@ -39,15 +43,11 @@ Napi::String SayHi(const Napi::CallbackInfo& info)
 
 void helloSubstr(const Napi::CallbackInfo &info)
 {
-  const std::string str = info[0].As<Napi::String>();
+  std::string str = info[0].As<Napi::String>();
   const int idx = info[1].As<Napi::Number>();
   Napi::Function callback = info[2].As<Napi::Function>();
 
-  std::string val;
-  if(idx >= 0)
-    val = str.substr(static_cast<size_t>(idx));
-
-  auto *async = new DataProcessingAsyncWorker(callback, std::move(val));
+  auto *async = new DataProcessingAsyncWorker(callback, std::move(str), idx);
   async->Queue();  
 }
 
