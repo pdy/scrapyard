@@ -15,7 +15,9 @@ flags = [
     '-std=c++17',
     '-stdlib=libstdc++',
     '-x','c++',
-    '-I','.'
+    '-I','.',
+    '-I','node_modules/node-addon-api/',
+    '-I','/usr/include/nodejs/src/'
 ]
 
 
