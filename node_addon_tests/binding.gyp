@@ -7,7 +7,10 @@
         "<!@(node -p \"require('node-addon-api').include\")"
       ],
       "target_name": "hello_addon",
-      "sources": [ "hello_addon.cpp" ],
+      "sources": [
+        "./src/addon.cpp",
+        "./src/MyObjects.cpp"
+      ],
       'defines': [ 'NAPI_DISABLE_CPP_EXCEPTIONS' ]
     }
   ]

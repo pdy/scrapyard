@@ -1,4 +1,5 @@
 #include <napi.h>
+#include "MyObjects.h"
 
 namespace {
 
@@ -55,6 +56,10 @@ Napi::Object init(Napi::Env env, Napi::Object exports)
 {
     exports.Set(Napi::String::New(env, "sayHi"), Napi::Function::New(env, SayHi));
     exports.Set(Napi::String::New(env, "helloSubstr"), Napi::Function::New(env, helloSubstr));
+
+    Napi::String helloStrName = Napi::String::New(env, "HelloStr");
+    exports.Set(helloStrName, HelloStr::GetClass(env));
+
 
     return exports;
 };
