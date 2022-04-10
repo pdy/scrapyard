@@ -1,4 +1,4 @@
-const hello_world = require('./build/Release/hello_addon.node')
+const hello_world = require('./lib/bindings.js')
 
 console.log(hello_world.sayHi());
 
@@ -19,14 +19,7 @@ hello_world.helloSubstr("text", -2, substrRet);
 console.log("text 4");
 hello_world.helloSubstr("text", 4, substrRet);
 
-//console.log("HelloStr with num 2");
-//const nativeStrFail = new hello_world.HelloStr(2);
-
-console.log("HelloStr with str my_text");
-const nativeStr = new hello_world.HelloStr("my_text");
-
-console.log("HelloStr::substr(2)");
-console.log(nativeStr.substr(2));
-
-
+var nativeInstance = new hello_world.NativeClass("native_text");
+console.log("native_test " + 3);
+console.log(nativeInstance.substr(3));
 
