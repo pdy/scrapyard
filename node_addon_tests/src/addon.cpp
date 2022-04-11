@@ -31,8 +31,34 @@ private:
   int m_idx;
 };
 
+class BufferTestWorker : public Napi::AsyncWorker
+{
+public:
+  
+
+private:
+  Napi::Buffer<uint8_t> m_byteBuffer;
+};
+
 } // namespace
 
+void ReverseByteBuffer(const Napi::CallbackInfo &info)
+{
+  const auto env = info.Env();
+  Napi::HandleScope scope(env);
+
+  auto byteBuffer = info[0].As<Napi::Buffer<uint8_t>>();
+  Napi::Function callback = info[1].As<Napi::Function>(); 
+
+  
+  auto retBuffer = Napi::Buffer<uint8_t>::New(env, byteBuffer.ByteLength());
+  
+  size_t j = 0;
+  for(auto i = byteBuffer.Length(); i > 0; --i,++j)
+  {
+    retBuffer[j] = byteBuffer[i - 1];
+  }
+}
 
 Napi::String SayHi(const Napi::CallbackInfo& info)
 {
