@@ -13,10 +13,17 @@ function sayHi(){
  * @param {string} str
  * @param {number} posNum
  * @param {function} callback
- * @returns {string}
  */
 function helloSubstr(str, posNum, callback) {
   return addon.helloSubstr(str, posNum, callback);
+}
+
+/**
+ * @param {Buffer} buffer
+ * @param {function} callback
+ */
+function reverseByteBuffer(buffer, callback) {
+  return addon.reverseByteBuffer(buffer, callback);
 }
 
 /**
@@ -38,6 +45,7 @@ function NativeClassStrDemoWrap(str){
 module.exports = {
   sayHi: sayHi,
   helloSubstr: helloSubstr,
+  reverseByteBuffer: reverseByteBuffer,
 
   NativeClass: NativeClassStrDemoWrap
 

@@ -58,6 +58,8 @@ void ReverseByteBuffer(const Napi::CallbackInfo &info)
   {
     retBuffer[j] = byteBuffer[i - 1];
   }
+
+  callback.Call({ env.Null(), retBuffer });
 }
 
 Napi::String SayHi(const Napi::CallbackInfo& info)
@@ -82,6 +84,7 @@ Napi::Object init(Napi::Env env, Napi::Object exports)
 {
     exports.Set(Napi::String::New(env, "sayHi"), Napi::Function::New(env, SayHi));
     exports.Set(Napi::String::New(env, "helloSubstr"), Napi::Function::New(env, helloSubstr));
+    exports.Set(Napi::String::New(env, "reverseByteBuffer"), Napi::Function::New(env, ReverseByteBuffer));
 
     Napi::String helloStrName = Napi::String::New(env, "HelloStr");
     exports.Set(helloStrName, HelloStr::GetClass(env));

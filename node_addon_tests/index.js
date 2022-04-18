@@ -23,3 +23,16 @@ var nativeInstance = new hello_world.NativeClass("native_text");
 console.log("native_test " + 3);
 console.log(nativeInstance.substr(3));
 
+const buffer = Buffer.from([8, 6, 7, 5, 3, 0, 9]);
+hello_world.reverseByteBuffer(buffer, function(err, retBuffer){
+  if(err)
+    console.log(err);
+  else
+  {
+    console.log("org buffer ");
+    console.log(buffer);
+    console.log("reversed: " + retBuffer);
+    console.log(retBuffer);
+    console.log(buffer);
+  }
+});
