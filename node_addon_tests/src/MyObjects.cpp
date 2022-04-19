@@ -5,7 +5,6 @@ HelloStr::HelloStr(const Napi::CallbackInfo &info)
   : ObjectWrap(info)
 {
   Napi::Env env = info.Env();
-
   if(info.Length() != 1)
   {
     Napi::TypeError::New(env, "Wrong number of arguments").ThrowAsJavaScriptException();

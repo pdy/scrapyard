@@ -27,6 +27,8 @@ const buffer = Buffer.from([8, 6, 7, 5, 3, 0, 9]);
 hello_world.reverseByteBuffer(buffer, function(err, retBuffer){
   if(err)
     console.log(err);
+  else if(retBuffer === undefined)
+    console.log("ret buffer undefined");
   else
   {
     console.log("org buffer ");
@@ -36,3 +38,4 @@ hello_world.reverseByteBuffer(buffer, function(err, retBuffer){
     console.log(buffer);
   }
 });
+
