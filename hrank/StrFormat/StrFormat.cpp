@@ -42,7 +42,41 @@ static std::string formatStr(std::string_view str)
   }
 
 
+  size_t blockOfThreeLen = stripped.size();
+  size_t blockOfTwoCount = stripped.size() - blockOfThreeLen;
+  while(blockOfThreeLen % 3 != 0 || blockOfTwoCount % 2 != 0)
+  {
+    --blockOfThreeLen;
+    ++blockOfTwoCount;// = stripped.size() - blockOfThreeLen;
+  }
+
   std::string ret;
+  for(size_t i = 0; i < blockOfThreeLen; ++i)
+  {
+    if(i && i % 3 == 0)
+      ret.push_back(' ');
+
+    ret.push_back(stripped[i]);
+  }
+
+
+  if(blockOfTwoCount)
+  {
+    if(blockOfThreeLen)
+      ret.push_back(SPACE);
+
+    size_t count = 0;
+    for(size_t i = blockOfThreeLen; i < stripped.size(); ++i, ++count)
+    {
+      if(i != blockOfThreeLen && count % 2 == 0)
+        ret.push_back(' ');
+
+      ret.push_back(stripped[i]);
+    }
+  } 
+
+
+#if 0
   size_t blockSize = 3, blockCounter = 1;
   for(size_t i = 0; i < stripped.size(); ++i, ++blockCounter)
   {  
@@ -75,6 +109,8 @@ static std::string formatStr(std::string_view str)
 
     ret.insert(last, SPACE);
   }
+#endif
+
 
   ret.push_back(';');
   return ret;
@@ -88,15 +124,32 @@ struct Test
 };
 
 
-int main(int argc, char *argv[])
+int main(int /*argc*/, char * /*argv*/ [])
 {
   
   const Test TESTS[] = {
-/*
-  Test{
+    Test{
+      .input = "AB",
+      .output = "AB;"
+    },
+    Test{
+      .input = "AB16",
+      .output = "AB 16;"
+    },
+    Test{
+      .input = "AB1",
+      .output = "AB1;"
+    },
+    Test{
       .input = "AB1--56",
       .output = "AB1 56;"
-    },*/
+    },
+
+    Test{
+      .input = "AB1--567",
+      .output = "AB1 567;"
+    },
+    
     Test{
       .input = "AB123 56-56",
       .output = "AB1 235 656;"
@@ -109,10 +162,15 @@ int main(int argc, char *argv[])
     Test{
       .input = "AB123 56-566",
       .output = "AB1 235 65 66;"
+    },
+    Test{
+      .input = "AB123 56-566---5656",
+      .output = "AB1 235 656 656 56;"
     }
+    
   };
  
-  for(auto it = std::begin(TESTS); it != std::end(TESTS); ++it)
+  for(auto it = std::begin(TESTS); it != std::end(TESTS); it = std::next(it))
   {
     const auto result = formatStr(it->input);
     log << "input   [" << it->input << "]";
