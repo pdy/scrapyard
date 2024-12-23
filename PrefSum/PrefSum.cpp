@@ -26,6 +26,8 @@
 #include <cmdline.h> 
 #include <sstream>
 #include "simplelog/simplelog.h"
+#include <concepts>
+
 
 static std::vector<int> toArr(std::string_view arrStr, char delim = ' ')
 {
@@ -73,7 +75,7 @@ static std::vector<long> calcPrefSum(const std::vector<int> &in)
   return ret;
 }
 
-template<typename T>
+template<std::integral T>
 static void printCout(const std::vector<T> &arr)
 {
   for(size_t i = 0; const auto num : arr)

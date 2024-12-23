@@ -24,6 +24,7 @@
 */
 
 #include <cmdline.h> 
+#include <concepts>
 #include <sstream>
 #include "simplelog/simplelog.h"
 
@@ -55,13 +56,13 @@ static std::vector<int> toArr(std::string_view arrStr, char delim = ' ')
   return ret;
 }
 
-static std::vector<int> calcPrefSum(const std::vector<int> &in)
+static std::vector<long> calcPrefSum(const std::vector<int> &in)
 {
   if(in.empty())
     return {};
 
 
-  std::vector<int> ret;
+  std::vector<long> ret;
   ret.reserve(in.size());
 
   ret.push_back(in[0]);
@@ -90,7 +91,8 @@ static std::vector<int> calcReversePrefSum(const std::vector<int> &in)
   return ret;
 }
 
-static void printCout(const std::vector<int> &arr)
+template<std::integral T>
+static void printCout(const std::vector<T> &arr)
 {
   for(size_t i = 0; const auto num : arr)
   {

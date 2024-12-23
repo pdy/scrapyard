@@ -26,6 +26,7 @@
 #include <cmdline.h> 
 #include <sstream>
 #include "simplelog/simplelog.h"
+#include <concepts>
 
 static std::vector<int> toArr(std::string_view arrStr, char delim = ' ')
 {
@@ -73,7 +74,7 @@ static std::vector<long> calcPrefSum(const std::vector<int> &in)
   return ret;
 }
 
-template<typename T>
+template<std::integral T>
 static void printCout(const std::vector<T> &arr)
 {
   for(size_t i = 0; const auto num : arr)
@@ -128,7 +129,6 @@ int main(int argc, char *argv[])
 
   struct Range {size_t start, end;};
   std::vector<Range> zeroSumsSubArrays;
-
   for(size_t i = 0; i < prefSum.size(); ++i)
   {
     const long value = prefSum[i];
@@ -136,7 +136,8 @@ int main(int argc, char *argv[])
     {
       zeroSumsSubArrays.push_back({.start = 0, .end = i});
     }
-    else if(i < prefSum.size() - 1)
+    
+    if(i < prefSum.size() - 1)
     {
       for(size_t j = i + 1; j < prefSum.size(); ++j)
       {
