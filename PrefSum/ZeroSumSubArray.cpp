@@ -89,6 +89,29 @@ static void printCout(const std::vector<T> &arr)
 
 int main(int argc, char *argv[])
 {
+/*
+ *  The goal is to fund subarray of an array of integers
+ *  where sum of the elements of this sub array equals to zero.
+ *
+ *  Given prefix sum array, we can observe
+ *
+ *           input [1 2 3 -2 -1]
+ *      prefix sum [1 3 6 4 3]
+ *      Sub ranges [2 - 4]
+ *
+ *  So we have two ways of finding solution:
+ *  
+ *  1.  If prefix sum array consinst element equal to zero then subarray
+ *      from index 0 to index where zero element lays is one the solution.
+ *
+ *  2.  If in the prefix sum array, are two elements with the same value,
+ *      then range from index + 1 of first element two index of the second one, both inclusive,
+ *      is one of our solution.
+ *
+ */
+
+
+
   cmdline::parser arg;
   arg.add("help", 'h', "Print help.");
   arg.add<std::string>("input", 'i', "Space separated integers", true);
@@ -115,7 +138,7 @@ int main(int argc, char *argv[])
     LOG << arg.usage();
     return 0;
   }
-  
+
   const auto inArr = toArr(arg.get<std::string>("input"));
   const auto prefSum = calcPrefSum(inArr);
  

@@ -106,6 +106,19 @@ static void printCout(const std::vector<T> &arr)
 
 int main(int argc, char *argv[])
 {
+  /*
+   *  Array equilibrium is index, where sum of the elements before and after are equal.
+   *
+   *  Solution to find this index is to calculate two prefix sum arrays,
+   *  one from the begining and the other one from the end.
+   *
+   *  If in those two prefix sum arrays we find same value at the same index, then this
+   *  index is our solution.
+   *
+   *
+   */
+
+
   cmdline::parser arg;
   arg.add("help", 'h', "Print help.");
   arg.add<std::string>("input", 'i', "Space separated integers", true);
