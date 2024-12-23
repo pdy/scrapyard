@@ -88,6 +88,8 @@ static void printCout(const std::vector<T> &arr)
   }
 }
 
+// https://www.geeksforgeeks.org/prefix-sum-array-implementation-applications-competitive-programming/
+
 int main(int argc, char *argv[])
 {
   cmdline::parser arg;
