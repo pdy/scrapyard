@@ -19,6 +19,8 @@ ifneq (, $(findstring debug,$(MAKECMDGOALS)))
 	STRIP = echo
 endif
 
+OBJ_PATH := $(BUILD)/obj
+
 .PHONY: all clean
 
 all: post-build
@@ -27,9 +29,10 @@ release: all
 
 pre-build:
 	@mkdir -p $(BUILD) # prep dist 
+	@mkdir -p $(OBJ_PATH) # prep dist 
 
 post-build: main-build
-	$(STRIP) $(BUILD)/*
+	$(STRIP) $(BUILD)/RitsOrderCache
 
 main-build: pre-build
 	@$(MAKE) --no-print-directory $(BUILD)/RitsOrderCache
@@ -38,6 +41,17 @@ clean:
 	@rm -r ./bin
 
 
-$(BUILD)/%: ./%.cpp
-	@$(CXX) $(CXXFLAGS) -o $@ $^ $(LD_FLAGS) $(LD_LIBS)
-	@echo "$@"
+SRCS := $(wildcard ./*.cpp)
+OBJS := $(patsubst ./%.cpp,$(OBJ_PATH)/%.o, $(SRCS))
+
+#$(BUILD)/%: ./%.cpp
+#	@$(CXX) $(CXXFLAGS) -o $@ $^ $(LD_FLAGS) $(LD_LIBS)
+#	@echo "$@"
+
+$(BUILD)/RitsOrderCache: $(OBJS)	
+	@$(CXX) $(CXXFLAGS) -o $@ $^ $(LD_FLAGS) $(LD_LIBS) 
+	@echo "$<"
+
+$(OBJ_PATH)/%.o: ./%.cpp
+	@$(CXX) $(CXXFLAGS) $(TEST_FLAGS) -c -o $@ $^ 
+	@echo "$<"
