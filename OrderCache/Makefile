@@ -1,6 +1,6 @@
 print-%  : ; @echo $* = $($*)
 
-CXX := clang++
+CXX := g++
 
 FLAGS := -std=c++17 -Wno-deprecated-register -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-padded
 
@@ -15,7 +15,7 @@ CXXFLAGS = $(FLAGS) $(INCLUDES) -O3 -Wall
 STRIP := strip
 ifneq (, $(findstring debug,$(MAKECMDGOALS)))
 	BUILD = ./bin/debug
-	CXXFLAGS = $(FLAGS) $(INCLUDES) -g -Weverything
+	CXXFLAGS = $(FLAGS) $(INCLUDES) -g #-Weverything
 	STRIP = echo
 endif
 
