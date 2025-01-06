@@ -3,7 +3,6 @@
 #include <iterator>
 #include <numeric>
 #include <type_traits>
-#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -19,144 +18,6 @@ void remove_if(std::deque<Order> &cache, Func &&comp)
     cache.end()
   );
 }
-
-struct UniqueUser
-{
-  struct Match
-  {
-    enum class Type
-    {
-      Buy,
-      Sell,
-      InProgress
-    };
-
-//      Match() { orders.reserve(10); }
-
-    Match(Type type_, const Order *order)
-     : type{type_}
-    {
-      orders.reserve(10);
-      orders.push_back(order);
-    } 
-
-    Type type;
-    std::vector<const Order*> orders;
-
-    unsigned total() const
-    {
-      if(type == Type::InProgress || orders.empty())
-        return 0;
-
-      unsigned ret = 0;
-      size_t start = 0, end = 0;
-      if(type == Type::Buy)
-      {
-        ret = orders[0]->qty();
-        start = 1;
-        end = orders.size();
-      }
-      else
-      { // type sell
-        ret = orders.back()->qty();
-        start = 0;
-        end = orders.size() - 1;
-      } 
-
-      unsigned value = 0;
-      for(size_t i = start; i < end; ++i)
-        value += orders[i]->qty();
-
-      return ret - value;
-    }
-  };
-
-  UniqueUser() noexcept = default;
-
-  UniqueUser(UniqueUser &&other) noexcept
-  {
-    swap(*this, other);
-  }
-
-  UniqueUser(const UniqueUser &other) noexcept
-  {
-    id = other.id;
-    matches = other.matches;
-  }
-
-  UniqueUser(const std::string &id_) noexcept
-    : id{id_}
-  {
-    matches.reserve(10);
-  }
-    
-  std::string id;
-  std::vector<Match> matches;
-
-  UniqueUser& operator=(UniqueUser other) noexcept
-  {
-    swap(*this, other);
-    return *this;
-  }
-
-  friend void swap(UniqueUser &lhs, UniqueUser &rhs) noexcept
-  {
-    using std::swap;
-
-    swap(lhs.id, rhs.id);
-    swap(lhs.matches, rhs.matches);
-  }
-
-  void match(const Order *o)
-  {
-    if(matches.empty())
-    {
-      Match::Type newMatchType = o->side() == "Buy" ? Match::Type::Buy : Match::Type::InProgress;
-      matches.emplace_back(newMatchType, o);
-      return;
-    }
-
-    Match::Type type = o->side() == "Buy" ? Match::Type::Buy : Match::Type::Sell;
-    if(type == Match::Type::Sell)
-    {
-      // if it's sell it can match if last is Buy or InProgress
-      
-      auto &last = matches.back();
-      if(last.type == Match::Type::Buy || last.type == Match::Type::InProgress)
-        last.orders.push_back(o);
-      else
-        matches.emplace_back(type, o);
-    }
-    else // type == Match::Type::Buy
-    {
-      // if it's Buy it can only match with InProgress, then it changes to Sell
-      // new match otherwise
-      
-      auto &last = matches.back();
-      if(last.type == Match::Type::InProgress)
-      {
-        last.orders.push_back(o);
-        last.type = Match::Type::Sell;
-      }
-      else
-      {
-        matches.emplace_back(type, o);
-      }
-
-    }
-  }
-
-  unsigned int totalQty() const
-  {
-    unsigned ret = 0;
-
-    for(const auto &m : matches)
-      ret += m.total();
-
-    return ret;
-  }
-
-};
 
 } // namespace
 
@@ -189,71 +50,84 @@ unsigned int OrderCacheImpl::getMatchingSizeForSecurity(const std::string& secur
 {
   // Had to make some assumtpion here, since...
   //
-  // "Can only match a Buy order with a Sell order"
-  // "Buy order can match against multiple Sell orders (and vice versa)"
-  // These two contradict each other. Vice versa means matching Sell with multiple Buy, but
-  // Buy cannot match with another Buy?
+  // "SecId3 has only one Buy order, no other orders to match against"
   //
-  // Assumption 1 - Buy can match with multiple Sells, mutliple Sells can match with later SINGLE Buy.
+  // Assumption 1 - return 0 in such case as there is no match
   //
-  // "Users in the same company cannot match against each other." So...
-  // What if two users in the same company under same secId have separate matching operations of their own?
-  // For which user should I return total qty?
+  // Doc makes it confusing which values are supposed to be accounted for resulting total qty.
   //
-  // Assumption 2 - Return the sum of total, separate matches of each user, as they fall under same secId.
+  // Once it's Buy, once it's Sell. For example:
+  // 
+  // "Buy order can match against multiple Sell orders (and vice versa)
+  //          - eg a security id "ABCD" has 
+  //              Buy  order with qty 10000
+  //              Sell order with qty  2000
+  //              Sell order with qty  1000               
+  //          - security id "ABCD" has a total match of 3000"
+  // 
+  // So it looks like we count Sell, but later such dataset:
   //
-  // "Some orders may not match entirely or at all"
-  // So ignore them?
+  //  Order("OrdId1",  "SecId1", "Sell", 100, "User10", "Company2"),
+  //  Order("OrdId3",  "SecId1", "Buy",  300, "User13", "Company2"),
+  //  Order("OrdId7",  "SecId1", "Sell", 700, "User10", "Company2"),
+  //  Order("OrdId8",  "SecId1", "Sell", 800, "User2",  "Company1"),
+  //  Order("OrdId11", "SecId1", "Sell",1100, "User13", "Company2"),
+  //  Order("OrdId13", "SecId1", "Sell",1300, "User1",  "Company")
+  //  
+  // is supposed to return 300 cause OrdId3 Buy 300 matches with OrdId8 Sell 800 and OrdId13 Sell 1300.
+  // So it looks like we count Buy.
+  //  
+  // But then, such dataset: 
   //
-  // Assumption 3 - Ignoring non matching orders.
+  //  Order("OrdId4",  "SecId2", "Sell", 400, "User12", "Company2"),
+  //  Order("OrdId9",  "SecId2", "Buy",  900, "User6",  "Company2"),
+  //  Order("OrdId10", "SecId2", "Sell",1000, "User5",  "Company1"),
+  //  Order("OrdId12", "SecId2", "Buy", 1200, "User9",  "Company2")
   //
-  // It's also technically possible under description and assumptions that total will come up negative,
-  // but I have no means to return that.
+  // is supposed to return 1000 as OrdId9 Buy 900 matches with OrdId10 Sell 1000.
+  //
+  // So we count Sell here... 
+  //
+  // But then we count Buy in two more instances
+  //  
+  // here:
+  //  Order("OrdId2",  "SecId3", "Sell", 200, "User8",  "Company2")
+  //  Order("OrdId5",  "SecId3", "Sell", 500, "User7",  "Company2")
+  //  Order("OrdId6",  "SecId3", "Buy",  600, "User3",  "Company1")
+  // 
+  // for total of 600
+  //
+  // and here:
+  //  Order("OrderId2", "SecId2", "Sell", 3000, "User2", "CompanyB"),
+  //  Order("OrderId4", "SecId2", "Buy",   600, "User4", "CompanyC"),
+  //  Order("OrderId5", "SecId2", "Buy",   100, "User5", "CompanyB"),
+  //  Order("OrderId7", "SecId2", "Buy",  2000, "User7", "CompanyE"),
+  //  Order("OrderId8", "SecId2", "Sell", 5000, "User8", "CompanyE")
+  //
+  // for total of 2700
+  //
+  // If which specific side is supposed to be accounted for is volatile and depending of some circumstances,
+  // then it's not specified clearly enough.
+  //
+  // Assumption 2 - since Buy is counted more often than Sell (3:2) I'm going to sum Buy.
+  //
 
   
 
-#if 0
-  std::unordered_map<std::string, UniqueUser> secIdUsers;
-
-  for(const auto &o : m_cache)
-  {
-    if(o.securityId() != securityId)
-      continue;
-
-    const auto id = o.user() + "_" + o.company();
-    auto foundUser = secIdUsers.find(id);
-    if(foundUser != secIdUsers.end())
-    {
-      foundUser->second.match(&o);
-    }
-    else
-    {
-      UniqueUser user{id};
-      user.match(&o);
-      secIdUsers[id] = std::move(user);
-    }
-  }
-
-
-  unsigned int ret = 0;
-  for(const auto &seciduser : secIdUsers)
-    ret += seciduser.second.totalQty();
-  
-  return ret;
-
-#endif
-
+  //---------------------------------
+  // This can be easly avoided by keeping a hash of sec id to list/table of all opearations
+  // Task did not specify if we should be extra optimal with particular methods. 
   std::vector<const Order*> secOps;
   for(const auto &o : m_cache)
   {
     if(o.securityId() == securityId)
       secOps.push_back(&o);
   }
-
+  //----------------------------------
 
   std::unordered_set<const Order*> used;
   std::vector<std::vector<const Order*>> matches;
-  /*auto &match =*/ matches.emplace_back();
+  matches.emplace_back();
   size_t matchIdx = 0;
   for(size_t i = 0; i < secOps.size(); ++i)
   {
@@ -264,7 +138,6 @@ unsigned int OrderCacheImpl::getMatchingSizeForSecurity(const std::string& secur
     auto &match = matches[matchIdx];
     match.push_back(o);
 
-    std::unordered_set<const Order*> tmpUsed;
     for(size_t j = 0; j < secOps.size(); ++j)
     {
       if(i == j)
@@ -278,12 +151,10 @@ unsigned int OrderCacheImpl::getMatchingSizeForSecurity(const std::string& secur
       if(o->side() == "Sell" && candidate->side() == "Buy")
       {
         match.push_back(candidate);
-        tmpUsed.insert(candidate);
       }
       else if(o->side() == "Buy" && candidate->side() == "Sell")
       {
         match.push_back(candidate);
-        tmpUsed.insert(candidate);
       }
     }
     
@@ -293,11 +164,10 @@ unsigned int OrderCacheImpl::getMatchingSizeForSecurity(const std::string& secur
     }
     else
     {
-      used.insert(o);
-      for(const auto &tmp : tmpUsed)
-        used.insert(tmp);
+      for(const auto &m : match)
+        used.insert(m);
 
-      /*match =*/ matches.emplace_back();
+      matches.emplace_back();
       ++matchIdx;
     }
 
@@ -315,7 +185,10 @@ unsigned int OrderCacheImpl::getMatchingSizeForSecurity(const std::string& secur
       if(o->side() == "Buy")
         ret[i] += o->qty();
     }
-
+    /*
+    for(size_t j = 1; j < m.size(); ++j)
+      ret[i] += m[j]->qty();
+*/
     ++i;
   }
 

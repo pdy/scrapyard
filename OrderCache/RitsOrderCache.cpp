@@ -126,29 +126,27 @@ static void testCase_2()
 
   const std::vector<Order> ORDERS{
     //
-    //Order("OrdId1",  "SecId1", "Sell", 100, "User10", "Company2"),
+    Order("OrdId1",  "SecId1", "Sell", 100, "User10", "Company2"),
     Order("OrdId2",  "SecId3", "Sell", 200, "User8",  "Company2"),
-    //Order("OrdId3",  "SecId1", "Buy",  300, "User13", "Company2"),
+    Order("OrdId3",  "SecId1", "Buy",  300, "User13", "Company2"),
     Order("OrdId4",  "SecId2", "Sell", 400, "User12", "Company2"),
     Order("OrdId5",  "SecId3", "Sell", 500, "User7",  "Company2"),
     Order("OrdId6",  "SecId3", "Buy",  600, "User3",  "Company1"),
-    //Order("OrdId7",  "SecId1", "Sell", 700, "User10", "Company2"),
-    //Order("OrdId8",  "SecId1", "Sell", 800, "User2",  "Company1"),
+    Order("OrdId7",  "SecId1", "Sell", 700, "User10", "Company2"),
+    Order("OrdId8",  "SecId1", "Sell", 800, "User2",  "Company1"),
     Order("OrdId9",  "SecId2", "Buy",  900, "User6",  "Company2"),
     Order("OrdId10", "SecId2", "Sell",1000, "User5",  "Company1"),
-    //Order("OrdId11", "SecId1", "Sell",1100, "User13", "Company2"),
+    Order("OrdId11", "SecId1", "Sell",1100, "User13", "Company2"),
     Order("OrdId12", "SecId2", "Buy", 1200, "User9",  "Company2"),
-    //Order("OrdId13", "SecId1", "Sell",1300, "User1",  "Company")
+    Order("OrdId13", "SecId1", "Sell",1300, "User1",  "Company")
   };
 
   struct Expected { std::string secId; unsigned totalQy; };
 
   const std::vector<Expected> expected{
-#if 0
     Expected{
       "SecId1", 300
     },
-#endif
     Expected{
       "SecId2", 1000
     },
@@ -169,13 +167,57 @@ static void testCase_2()
 
     LOG << "  " << e.secId << " " << e.totalQy << " == " << actual << " " << (e.totalQy == actual ? "Ok" : "Fail!");
   }
+}
 
+
+static void testCase_3()
+{
+  LOG << "Test case 3 getMatchingSizeForSecurity";
+
+  const std::vector<Order> ORDERS{
+    Order("OrderId1", "SecId1", "Buy",  1000, "User1", "CompanyA"),
+    Order("OrderId2", "SecId2", "Sell", 3000, "User2", "CompanyB"),
+    Order("OrderId3", "SecId1", "Sell",  500, "User3", "CompanyA"),
+    Order("OrderId4", "SecId2", "Buy",   600, "User4", "CompanyC"),
+    Order("OrderId5", "SecId2", "Buy",   100, "User5", "CompanyB"),
+    Order("OrderId6", "SecId3", "Buy",  1000, "User6", "CompanyD"),
+    Order("OrderId7", "SecId2", "Buy",  2000, "User7", "CompanyE"),
+    Order("OrderId8", "SecId2", "Sell", 5000, "User8", "CompanyE")
+  };
+
+  struct Expected { std::string secId; unsigned totalQy; };
+
+  const std::vector<Expected> expected{
+    Expected{
+      "SecId1", 0
+    },
+    Expected{
+      "SecId2", 2700
+    },
+    Expected{
+      "SecId3", 0
+    }
+  };
+
+
+  OrderCacheImpl cache;
+  for(const auto &o : ORDERS)
+    cache.addOrder(o);
+
+  
+  for(const auto &e : expected)
+  {
+    const auto actual = cache.getMatchingSizeForSecurity(e.secId);
+
+    LOG << "  " << e.secId << " " << e.totalQy << " == " << actual << " " << (e.totalQy == actual ? "Ok" : "Fail!");
+  }
 }
 
 int main()
 {
   testCase_1();
   testCase_2();
+  testCase_3();
   return 0;
 }
 
