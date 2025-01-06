@@ -74,7 +74,7 @@ unsigned int OrderCacheImpl::getMatchingSizeForSecurity(const std::string& secur
   //  Order("OrdId11", "SecId1", "Sell",1100, "User13", "Company2"),
   //  Order("OrdId13", "SecId1", "Sell",1300, "User1",  "Company")
   //  
-  // is supposed to return 300 cause OrdId3 Buy 300 matches with OrdId8 Sell 800 and OrdId13 Sell 1300.
+  // is supposed to return 300 cause OrdId3 Buy 300 matches with OrdId8 Sell 800.
   // So it looks like we count Buy.
   //  
   // But then, such dataset: 
@@ -112,10 +112,11 @@ unsigned int OrderCacheImpl::getMatchingSizeForSecurity(const std::string& secur
   // Assumption 2 - since Buy is counted more often than Sell (3:2) I'm going to sum Buy.
   //
 
-  
+
 
   //---------------------------------
   // This can be easly avoided by keeping a hash of sec id to list/table of all opearations
+  // for that secId.
   // Task did not specify if we should be extra optimal with particular methods. 
   std::vector<const Order*> secOps;
   for(const auto &o : m_cache)
@@ -125,12 +126,68 @@ unsigned int OrderCacheImpl::getMatchingSizeForSecurity(const std::string& secur
   }
   //----------------------------------
 
-  std::unordered_set<const Order*> used;
 
-  // this is also unnecessary as we can sum directly to resulting buffer without additional order caching
-  // but decided to left it as visualize the loop a little bit better
-  // only thing we need is hash table of orders we already used
-  //
+ 
+// Uncomment to use expanded version to debug matches more clearly. 
+//#define USE_DEBUG_CLARITY
+
+#ifndef USE_DEBUG_CLARITY
+
+  std::unordered_set<const Order*> used, tmpUsed;
+  used.reserve(secOps.size()); tmpUsed.reserve(secOps.size());
+  std::vector<unsigned> matches; matches.reserve(10);
+
+  for(size_t i = 0; i < secOps.size(); ++i)
+  {
+    const Order *o = secOps[i];
+    if(used.find(o) != used.end())
+      continue;
+
+    tmpUsed.insert(o);
+    unsigned currMatchSum = 0;
+    if(o->side() == "Buy")
+      currMatchSum += o->qty();
+
+    for(size_t j = 0; j < secOps.size(); ++j)
+    {
+      if(i == j)
+        continue;
+
+      const auto *candidate = secOps[j];
+      if(used.find(candidate) != used.end() || (candidate->company() == o->company() && candidate->user() != o->user()))
+        continue;
+
+      if(o->side() == "Sell" && candidate->side() == "Buy")
+      {
+        currMatchSum += candidate->qty();
+        tmpUsed.insert(candidate);
+      }
+      else if(o->side() == "Buy" && candidate->side() == "Sell")
+      {
+        tmpUsed.insert(candidate);
+      }
+    }
+    
+    if(tmpUsed.size() == 1)
+    {
+      tmpUsed.clear();
+    }
+    else
+    {
+      for(const auto &m : tmpUsed)
+        used.insert(m);
+
+      tmpUsed.clear();
+      matches.push_back(currMatchSum);
+    }
+
+  }
+
+  return std::accumulate(matches.begin(), matches.end(), 0u);
+
+#else
+
+  std::unordered_set<const Order*> used;
   std::vector<std::vector<const Order*>> matches; 
   matches.emplace_back();
   size_t matchIdx = 0;
@@ -178,27 +235,19 @@ unsigned int OrderCacheImpl::getMatchingSizeForSecurity(const std::string& secur
 
   }
 
-  if(matches.empty())
-    return 0;
-
-  //--------------------------------------------
-  // this could be done already in two loops above
-  std::vector<unsigned> ret(matches.size()); 
-  size_t i = 0;
+  unsigned sum = 0;
   for(const auto &m : matches)
   {
     for(const auto *o : m)
     {
       if(o->side() == "Buy")
-        ret[i] += o->qty();
+        sum += o->qty();
     }
-   
-    ++i;
   }
-  //-------------------------------------------
 
+  return sum;
 
-  return std::accumulate(ret.begin(), ret.end(), 0u);
+#endif
 }
 
 // return all orders in cache in a vector

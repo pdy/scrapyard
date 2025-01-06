@@ -12,8 +12,8 @@
  */
 
 
-#define USE_NON_INHERIT_VER
 
+#define USE_NON_INHERIT_VER
 
 #ifdef USE_NON_INHERIT_VER
 
@@ -38,8 +38,8 @@ public:
 
   // return the total qty that can match for the security id
   //
-  // decaration does not make it clear how should I returned "no matches"
-  // result so I'm gonna return 0 in such case
+  // This one is described not clearly enough in documentation.
+  // See implementation for more details.
   //
   unsigned int getMatchingSizeForSecurity(const std::string& securityId); 
 
@@ -57,7 +57,7 @@ class OrderCacheImpl : public OrderCacheInterface
 
 public:
 
-  virtual ~OrderCacheImpl() = default;
+  virtual ~OrderCacheImpl() = default; // it's interface that should have this
 
   // add order to the cache
   void addOrder(Order order) override;
@@ -73,8 +73,8 @@ public:
 
   // return the total qty that can match for the security id
   //
-  // decaration does not make it clear how should I returned "no matches"
-  // result so I'm gonna return 0 in such case
+  // This one is described not clearly enough in documentation.
+  // See implementation for more details.
   //
   unsigned int getMatchingSizeForSecurity(const std::string& securityId) override; 
 

@@ -149,7 +149,8 @@ static void testCase_2()
     },
     Expected{
       "SecId2", 1000
-    },
+    }
+    ,
     Expected{
       "SecId3", 600
     }
