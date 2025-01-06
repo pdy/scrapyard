@@ -32,10 +32,10 @@ pre-build:
 	@mkdir -p $(OBJ_PATH) # prep dist 
 
 post-build: main-build
-	$(STRIP) $(BUILD)/RitsOrderCache
+	$(STRIP) $(BUILD)/MainOrderCache
 
 main-build: pre-build
-	@$(MAKE) --no-print-directory $(BUILD)/RitsOrderCache
+	@$(MAKE) --no-print-directory $(BUILD)/MainOrderCache
 	
 clean:
 	@rm -r ./bin
@@ -48,7 +48,7 @@ OBJS := $(patsubst ./%.cpp,$(OBJ_PATH)/%.o, $(SRCS))
 #	@$(CXX) $(CXXFLAGS) -o $@ $^ $(LD_FLAGS) $(LD_LIBS)
 #	@echo "$@"
 
-$(BUILD)/RitsOrderCache: $(OBJS)	
+$(BUILD)/MainOrderCache: $(OBJS)	
 	@$(CXX) $(CXXFLAGS) -o $@ $^ $(LD_FLAGS) $(LD_LIBS) 
 	@echo "$<"
 
