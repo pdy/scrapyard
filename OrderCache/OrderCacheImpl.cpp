@@ -54,7 +54,7 @@ unsigned int OrderCacheImpl::getMatchingSizeForSecurity(const std::string& secur
   //
   // Assumption 1 - return 0 in such case as there is no match
   //
-  // Doc makes it confusing which values are supposed to be accounted for resulting total qty.
+  // Doc makes it confusing which values are supposed to be accounted for resulting matching qty.
   //
   // Once it's Buy, once it's Sell. For example:
   // 
@@ -126,7 +126,12 @@ unsigned int OrderCacheImpl::getMatchingSizeForSecurity(const std::string& secur
   //----------------------------------
 
   std::unordered_set<const Order*> used;
-  std::vector<std::vector<const Order*>> matches;
+
+  // this is also unnecessary as we can sum directly to resulting buffer without additional order caching
+  // but decided to left it as visualize the loop a little bit better
+  // only thing we need is hash table of orders we already used
+  //
+  std::vector<std::vector<const Order*>> matches; 
   matches.emplace_back();
   size_t matchIdx = 0;
   for(size_t i = 0; i < secOps.size(); ++i)
@@ -176,6 +181,8 @@ unsigned int OrderCacheImpl::getMatchingSizeForSecurity(const std::string& secur
   if(matches.empty())
     return 0;
 
+  //--------------------------------------------
+  // this could be done already in two loops above
   std::vector<unsigned> ret(matches.size()); 
   size_t i = 0;
   for(const auto &m : matches)
@@ -185,12 +192,11 @@ unsigned int OrderCacheImpl::getMatchingSizeForSecurity(const std::string& secur
       if(o->side() == "Buy")
         ret[i] += o->qty();
     }
-    /*
-    for(size_t j = 1; j < m.size(); ++j)
-      ret[i] += m[j]->qty();
-*/
+   
     ++i;
   }
+  //-------------------------------------------
+
 
   return std::accumulate(ret.begin(), ret.end(), 0u);
 }
