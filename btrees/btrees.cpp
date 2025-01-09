@@ -1,0 +1,259 @@
+/*
+*  MIT License
+*  
+*  Copyright (c) 2020 Pawel Drzycimski
+*  
+*  Permission is hereby granted, free of charge, to any person obtaining a copy
+*  of this software and associated documentation files (the "Software"), to deal
+*  in the Software without restriction, including without limitation the rights
+*  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+*  copies of the Software, and to permit persons to whom the Software is
+*  furnished to do so, subject to the following conditions:
+*  
+*  The above copyright notice and this permission notice shall be included in all
+*  copies or substantial portions of the Software.
+*  
+*  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+*  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+*  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+*  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+*  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+*  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+*  SOFTWARE.
+*
+*/
+
+#include <cmdline.h> 
+#include "simplelog/simplelog.h"
+
+template<typename T>
+struct Node
+{
+  T data;
+
+  Node *left{nullptr};
+  Node *right{nullptr};
+};
+
+using NumNode = Node<int>;
+
+static void preOrder_recursive(NumNode *node, std::string &answer)
+{
+  // pre-order == Root - Left - Right
+  
+  if(!node)
+    return;
+
+  answer.append(std::to_string(node->data));
+  answer.push_back(' ');
+
+  preOrder_recursive(node->left, answer);
+  preOrder_recursive(node->right, answer);
+
+}
+
+static void inOrder_recursive(NumNode *node, std::string &answer)
+{
+  // Left - Root - Right
+  if(!node)
+    return;
+
+  inOrder_recursive(node->left, answer);
+
+  answer.append(std::to_string(node->data));
+  answer.push_back(' ');
+  
+  inOrder_recursive(node->right, answer);
+}
+
+static void postOrder_recursive(NumNode *node, std::string &answer)
+{
+  if(!node)
+    return;
+
+  postOrder_recursive(node->left, answer);
+  postOrder_recursive(node->right, answer);
+
+  answer.append(std::to_string(node->data));
+  answer.push_back(' ');
+}
+
+static std::string preOrder(NumNode *node)
+{
+  // pre-order == Root - Left - Right
+  
+  std::string ret;
+  preOrder_recursive(node, ret);
+  return ret;
+}
+
+static std::string inOrder(NumNode *root)
+{
+  // Left - Root - Right
+  
+  std::string ret;
+  inOrder_recursive(root, ret);
+  return ret;
+}
+
+static std::string postOrder(NumNode *root)
+{
+  // Left - Right - Root
+  
+  std::string ret;
+  postOrder_recursive(root, ret);
+  return ret;
+}
+
+static void preOrderTest()
+{
+
+  // pre-order == Root - Left - Right
+
+  /*
+   *                  1
+   *                 2  3   
+   *               4 5   6
+   *                      7
+   *
+   */
+
+  NumNode root{.data = 1};
+  NumNode left_2 {.data = 2};
+  NumNode left_4 {.data = 4};
+  NumNode right_5 {.data = 5};
+
+  root.left = &left_2;
+  left_2.left = &left_4;
+  left_2.right = &right_5;
+
+  NumNode right_3{.data = 3};
+  NumNode right_6{.data = 6};
+  NumNode right_7{.data = 7};
+
+  root.right = &right_3;
+  right_3.right = &right_6;
+  right_6.right = &right_7;
+
+  const std::string_view PREORDER_EXPECTED = "1 2 4 5 3 6 7 ";
+
+  LOG << "preOrder " << (PREORDER_EXPECTED == preOrder(&root) ? "Ok" : "Fail!"); 
+}
+
+static void inOrderTest()
+{
+
+  // pre-order == Root - Left - Right
+
+  /*
+   *                  1
+   *                 2  3   
+   *               4 5   6
+   *                      7
+   *
+   */
+
+  NumNode root{.data = 1};
+  NumNode left_2 {.data = 2};
+  NumNode left_4 {.data = 4};
+  NumNode right_5 {.data = 5};
+
+  root.left = &left_2;
+  left_2.left = &left_4;
+  left_2.right = &right_5;
+
+  NumNode right_3{.data = 3};
+  NumNode right_6{.data = 6};
+  NumNode right_7{.data = 7};
+
+  root.right = &right_3;
+  right_3.right = &right_6;
+  right_6.right = &right_7;
+
+  const std::string_view EXPECTED = "4 2 5 1 3 6 7 ";
+
+  LOG << "inOrder " << (EXPECTED == inOrder(&root) ? "Ok" : "Fail!"); 
+}
+
+static void postOrderTest()
+{
+
+  // pre-order == Left - Right - Root
+
+  /*
+   *                  1
+   *                 2  3   
+   *               4 5   6
+   *                      7
+   *
+   */
+
+  NumNode root{.data = 1};
+  NumNode left_2 {.data = 2};
+  NumNode left_4 {.data = 4};
+  NumNode right_5 {.data = 5};
+
+  root.left = &left_2;
+  left_2.left = &left_4;
+  left_2.right = &right_5;
+
+  NumNode right_3{.data = 3};
+  NumNode right_6{.data = 6};
+  NumNode right_7{.data = 7};
+
+  root.right = &right_3;
+  right_3.right = &right_6;
+  right_6.right = &right_7;
+
+  const std::string_view EXPECTED ="4 5 2 7 6 3 1 ";
+
+  LOG << "inOrder " << (EXPECTED == postOrder(&root) ? "Ok" : "Fail!"); 
+}
+
+int main()
+{
+
+  preOrderTest(); 
+  inOrderTest();
+  postOrderTest();
+
+  return 0;
+}
+
+#if 0
+int main(int argc, char *argv[])
+{
+  cmdline::parser arg;
+  arg.add("help", 'h', "Print help.");
+//  arg.add<std::string>("file", 'f', "Example file argument.", true);
+    
+  if(!arg.parse(argc, const_cast<const char* const*>(argv)))
+  {
+    const auto fullErr = arg.error_full();
+    if(!fullErr.empty())
+      LOG << fullErr;
+     
+    LOG << arg.usage();
+    return 0;
+  }
+  
+  if(arg.exist("help"))
+  {
+    LOG << arg.usage();
+    return 0;
+  } 
+
+  /* Example file arg check and get
+  if(!arg.exist("file"))
+  {
+    LOG << "--file or -f argument is mandatory!\n";
+    LOG << arg.usage();
+    return 0;
+  }
+  
+  const std::string file = arg.get<std::string>("file");
+  */
+       
+  return 0;
+}
+#endif
