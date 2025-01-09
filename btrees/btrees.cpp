@@ -105,6 +105,17 @@ static std::string postOrder(NumNode *root)
   return ret;
 }
 
+static size_t height(NumNode *node)
+{
+  if(!node)
+    return 0;
+
+  auto lh = height(node->left) + 1;
+  auto rh = height(node->right) + 1;
+
+  return std::max(lh, rh);
+}
+
 static void preOrderTest()
 {
 
@@ -135,9 +146,9 @@ static void preOrderTest()
   right_3.right = &right_6;
   right_6.right = &right_7;
 
-  const std::string_view PREORDER_EXPECTED = "1 2 4 5 3 6 7 ";
+  const std::string_view EXPECTED = "1 2 4 5 3 6 7 ";
 
-  LOG << "preOrder " << (PREORDER_EXPECTED == preOrder(&root) ? "Ok" : "Fail!"); 
+  LOG << "preOrder " << (EXPECTED == preOrder(&root) ? "Ok" : "Fail!"); 
 }
 
 static void inOrderTest()
@@ -207,7 +218,42 @@ static void postOrderTest()
 
   const std::string_view EXPECTED ="4 5 2 7 6 3 1 ";
 
-  LOG << "inOrder " << (EXPECTED == postOrder(&root) ? "Ok" : "Fail!"); 
+  LOG << "postOrder " << (EXPECTED == postOrder(&root) ? "Ok" : "Fail!"); 
+}
+
+static void heightTest()
+{
+
+  // pre-order == Left - Right - Root
+
+  /*
+   *                  1
+   *                 2  3   
+   *               4 5   6
+   *                      7
+   *
+   */
+
+  NumNode root{.data = 1};
+  NumNode left_2 {.data = 2};
+  NumNode left_4 {.data = 4};
+  NumNode right_5 {.data = 5};
+
+  root.left = &left_2;
+  left_2.left = &left_4;
+  left_2.right = &right_5;
+
+  NumNode right_3{.data = 3};
+  NumNode right_6{.data = 6};
+  NumNode right_7{.data = 7};
+
+  root.right = &right_3;
+  right_3.right = &right_6;
+  right_6.right = &right_7;
+
+  const size_t EXPECTED = 4; 
+
+  LOG << "height " << (EXPECTED == height(&root) ? "Ok" : "Fail!"); 
 }
 
 int main()
@@ -216,6 +262,7 @@ int main()
   preOrderTest(); 
   inOrderTest();
   postOrderTest();
+  heightTest();
 
   return 0;
 }
