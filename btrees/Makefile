@@ -32,7 +32,8 @@ post-build: main-build
 	$(STRIP) $(BUILD)/*
 
 main-build: pre-build
-	@$(MAKE) --no-print-directory $(BUILD)/btrees
+	#@$(MAKE) --no-print-directory $(BUILD)/btrees
+	@$(MAKE) --no-print-directory $(BUILD)/binary_tree
 	
 clean:
 	@rm -r ./bin
