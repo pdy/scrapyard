@@ -70,15 +70,12 @@ static std::string preOrderIt(NumNode *root)
     if(it->right)
       stack.push(it->right);
 
-    if(it->left)
-      it = it->left;
-    else if(!stack.empty())
+    it = it->left;
+    if (!it && !stack.empty())
     {
       it = stack.top();
       stack.pop();
     }
-    else
-      it = nullptr;
   }
 
   return ret;
@@ -96,6 +93,34 @@ static void inOrder_recursive(NumNode *node, std::string &answer)
   answer.push_back(' ');
   
   inOrder_recursive(node->right, answer);
+}
+
+static std::string inOrderIt(NumNode *root)
+{
+  // pre-order == Left - Root - Right
+
+  std::string ret;
+
+  std::stack<NumNode*> stack;
+
+  auto *it = root;
+  while(it)
+  {
+    ret.append(std::to_string(it->data));
+    ret.push_back(' ');
+
+    if(it->right)
+      stack.push(it->right);
+
+    it = it->left;
+    if (!it && !stack.empty())
+    {
+      it = stack.top();
+      stack.pop();
+    }
+  }
+
+  return ret;
 }
 
 static void postOrder_recursive(NumNode *node, std::string &answer)
