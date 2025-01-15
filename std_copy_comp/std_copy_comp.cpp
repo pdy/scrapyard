@@ -26,6 +26,7 @@
 #include <vector>
 #include <algorithm>
 #include <string>
+#include "simplelog/simplelog.h"
 
 struct Type
 {
@@ -42,7 +43,9 @@ int main()
 
   std::vector<T> to(from.size());
 
+  const auto now = NOW();
   std::copy(from.begin(), from.end(), to.begin());
+  LOG << DURATION_MS(now).count();
 
   return 0;
 }

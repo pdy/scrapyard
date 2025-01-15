@@ -29,6 +29,7 @@
 #include <type_traits>
 #include <sstream>
 #include <iostream>
+#include <chrono>
 
 class SimpleLog
 {
@@ -83,5 +84,10 @@ private:
 };
 
 #define LOG (SimpleLog{})
+
+
+#define NOW() std::chrono::high_resolution_clock::now()
+#define DURATION_MS(start) std::chrono::duration_cast<std::chrono::milliseconds>(NOW() - start)
+#define DURATION_US(start) std::chrono::duration_cast<std::chrono::microseconds>(NOW() - start)
 
 #endif
