@@ -1,7 +1,7 @@
 /*
 *  MIT License
 *  
-*  Copyright (c) 2020 Pawel Drzycimski
+*  Copyright (c) 2025 Pawel Drzycimski
 *  
 *  Permission is hereby granted, free of charge, to any person obtaining a copy
 *  of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +25,7 @@
 
 #include <cmdline.h> 
 #include "simplelog/simplelog.h"
+#include <stack>
 
 template<typename T>
 struct Node
@@ -50,6 +51,37 @@ static void preOrder_recursive(NumNode *node, std::string &answer)
   preOrder_recursive(node->left, answer);
   preOrder_recursive(node->right, answer);
 
+}
+
+static std::string preOrderIt(NumNode *root)
+{
+  // pre-order == Root - Left - Right
+
+  std::string ret;
+
+  std::stack<NumNode*> stack;
+
+  auto *it = root;
+  while(it)
+  {
+    ret.append(std::to_string(it->data));
+    ret.push_back(' ');
+
+    if(it->right)
+      stack.push(it->right);
+
+    if(it->left)
+      it = it->left;
+    else if(!stack.empty())
+    {
+      it = stack.top();
+      stack.pop();
+    }
+    else
+      it = nullptr;
+  }
+
+  return ret;
 }
 
 static void inOrder_recursive(NumNode *node, std::string &answer)
@@ -148,7 +180,8 @@ static void preOrderTest()
 
   const std::string_view EXPECTED = "1 2 4 5 3 6 7 ";
 
-  LOG << "preOrder " << (EXPECTED == preOrder(&root) ? "Ok" : "Fail!"); 
+  LOG << "preOrder rec " << (EXPECTED == preOrder(&root) ? "Ok" : "Fail!"); 
+  LOG << "preOrder  it " << (EXPECTED == preOrderIt(&root) ? "Ok" : "Fail!"); 
 }
 
 static void inOrderTest()

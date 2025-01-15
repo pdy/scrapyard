@@ -15,7 +15,7 @@ CXXFLAGS = $(FLAGS) $(INCLUDES) -O3 -Wall
 STRIP := strip
 ifneq (, $(findstring debug,$(MAKECMDGOALS)))
 	BUILD = ./bin/debug
-	CXXFLAGS = $(FLAGS) $(INCLUDES) -g #-Weverything
+	CXXFLAGS = $(FLAGS) $(INCLUDES) -g -Wall#-Weverything
 	STRIP = echo
 endif
 
