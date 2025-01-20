@@ -104,20 +104,21 @@ static std::string inOrderIt(NumNode *root)
   std::stack<NumNode*> stack;
 
   auto *it = root;
-  while(it)
+  while(it || !stack.empty())
   {
+    while(it)
+    {
+      stack.push(it);
+      it = it->left;
+    }
+
+    it = stack.top();
+    stack.pop();
+
     ret.append(std::to_string(it->data));
     ret.push_back(' ');
 
-    if(it->right)
-      stack.push(it->right);
-
-    it = it->left;
-    if (!it && !stack.empty())
-    {
-      it = stack.top();
-      stack.pop();
-    }
+    it = it->right;
   }
 
   return ret;
@@ -125,6 +126,8 @@ static std::string inOrderIt(NumNode *root)
 
 static void postOrder_recursive(NumNode *node, std::string &answer)
 {
+  // Left - Right - Root
+
   if(!node)
     return;
 
@@ -241,7 +244,8 @@ static void inOrderTest()
 
   const std::string_view EXPECTED = "4 2 5 1 3 6 7 ";
 
-  LOG << "inOrder " << (EXPECTED == inOrder(&root) ? "Ok" : "Fail!"); 
+  LOG << "inOrder rec " << (EXPECTED == inOrder(&root) ? "Ok" : "Fail!"); 
+  LOG << "inOrder it  " << (EXPECTED == inOrderIt(&root) ? "Ok" : "Fail!"); 
 }
 
 static void postOrderTest()
