@@ -1,0 +1,8 @@
+#!/bin/bash
+
+if [ $# -ne 1 ]; then
+    echo "Invalid argument count. Need to pass opencv path as argument."
+    exit
+fi
+
+mkdir ./3rd && ln -s $1 ./3rd/opencv
