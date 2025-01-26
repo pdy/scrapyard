@@ -97,7 +97,7 @@ static void inOrder_recursive(NumNode *node, std::string &answer)
 
 static std::string inOrderIt(NumNode *root)
 {
-  // pre-order == Left - Root - Right
+  // in-order == Left - Root - Right
 
   std::string ret;
 
@@ -179,7 +179,7 @@ static size_t height(NumNode *node)
 static void preOrderTest()
 {
 
-  // pre-order == Root - Left - Right
+  // in-order == Root - Left - Right
 
   /*
    *                  1
@@ -251,7 +251,7 @@ static void inOrderTest()
 static void postOrderTest()
 {
 
-  // pre-order == Left - Right - Root
+  // post-order == Left - Right - Root
 
   /*
    *                  1
@@ -286,8 +286,6 @@ static void postOrderTest()
 static void heightTest()
 {
 
-  // pre-order == Left - Right - Root
-
   /*
    *                  1
    *                 2  3   
@@ -318,14 +316,47 @@ static void heightTest()
   LOG << "height " << (EXPECTED == height(&root) ? "Ok" : "Fail!"); 
 }
 
+static void bstInOrderTests()
+{
+  /*
+   *                  7
+   *                 5  8   
+   *               4 6   12
+   *                      13
+   *
+   */
+
+  NumNode root{.data = 7};
+  NumNode left_5 {.data = 5};
+  NumNode left_6 {.data = 6};
+  NumNode left_4 {.data = 4};
+
+  root.left = &left_5;
+  left_5.left = &left_4;
+  left_5.right = &left_6;
+
+  NumNode right_8{.data = 8};
+  NumNode right_12{.data = 12};
+  NumNode right_13{.data = 13};
+
+  root.right = &right_8;
+  right_8.right = &right_12;
+  right_12.right = &right_13;
+
+  const std::string EXPECTED = "4 5 6 7 8 12 13 ";
+
+  LOG << "bstInOrderTests  it " << (EXPECTED == inOrderIt(&root) ? "Ok" : "Fail!");
+  LOG << "bstInOrderTests rec " << (EXPECTED == inOrder(&root) ? "Ok" : "Fail!");
+}
+
 int main()
 {
 
   preOrderTest(); 
   inOrderTest();
+  bstInOrderTests();
   postOrderTest();
   heightTest();
-
   return 0;
 }
 
