@@ -12,11 +12,8 @@ inline constexpr typename std::remove_reference<T>::type&& constexpr_move(T&& t)
   return static_cast<typename std::remove_reference<T>::type&&>(t);
 }
 
-template<typename T, bool U>
-struct storage {};
-
 template<typename T>
-struct storage<T, true> 
+struct storage_base
 {
   union {
     char dummy;
@@ -25,55 +22,51 @@ struct storage<T, true>
 
   bool engaged;
 
-  explicit constexpr storage() noexcept
+  explicit constexpr storage_base() noexcept
     : dummy{0}, engaged{false}
   {}
 
-  explicit constexpr storage(const T &val) noexcept
+  explicit constexpr storage_base(const T &val) noexcept
     : value{val}, engaged{true}
   {}
 
-  explicit constexpr storage(T &&val) noexcept
+  explicit constexpr storage_base(T &&val) noexcept
     : value{constexpr_move(val)}, engaged{true}
   {}
+};
 
+template<typename T, bool U>
+struct storage {};
+
+template<typename T>
+struct storage<T, true> : storage_base<T>
+{
+  using Base = storage_base<T>;
+  using Base::Base ;
 
   ~storage() = default;
 
 };
 
 template<typename T>
-struct storage<T, false> 
+struct storage<T, false> : storage_base<T>
 {
-  union {
-    char dummy;
-    T value;
-  };
-
-  bool engaged;
-
-  explicit constexpr storage() noexcept
-    : dummy{0}, engaged{false}
-  {}
-
-  explicit constexpr storage(const T &val) noexcept
-    : value{val}, engaged{true}
-  {}
-
-  explicit constexpr storage(T &&val) noexcept
-    : value{constexpr_move(val)}, engaged{true}
-  {}
+  using Base = storage_base<T>;
+  using Base::Base;
 
   ~storage()
   {
-    if(engaged)
-      value.T::~T();
+    if(Base::engaged)
+      Base::value.T::~T();
   }
 };
 
 template<typename T>
 struct optional_storage : storage<T, std::is_trivially_destructible<T>::value>
-{};
+{
+  using Base = storage<T, std::is_trivially_destructible<T>::value>;
+  using Base::Base;
+};
 
 } // namespace internal
 
@@ -95,8 +88,6 @@ public:
   constexpr Optional(T &&val) noexcept
     : m_storage(internal::constexpr_move(val))
   {
-    //m_storage.value = internal::constexpr_move(val);
-    //m_storage.engaged =true;
   }
 
   ~Optional() = default;
