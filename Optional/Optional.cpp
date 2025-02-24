@@ -43,7 +43,12 @@ int main()
     LOG << "Integer has_value: " << (integer ? "Ok" : "FAILED!");
     LOG << "Integer value    : " << (integer.value() == 10 ? "Ok" : "FAILED!");
     LOG << "Integer value_or : " << (integer.value_or(5) == 10 ? "Ok" : "FAILED!");
-
+    LOG << "";
+    integer.reset(); 
+    LOG << "Reset has_value  : " << (integer.has_value() ? "FAILED!" : "Ok");
+    LOG << "Reset has_value  : " << (integer ? "FAILED!" : "Ok");
+    LOG << "Reset value_or   : " << (integer.value_or(5) == 5 ? "Ok" : "FAILED!");
+ 
   }  
 
   return 0;
