@@ -24,12 +24,44 @@
 */
 
 #include <cmdline.h> 
+#include <utility>
 #include "simplelog/simplelog.hpp"
 
 #include "Optional.hpp"
 
 int main()
 {
+
+  // properties testing
+  {
+    {
+      using OptInt = Optional<int>;
+      const bool swapNoexcept = noexcept(swap(std::declval<OptInt&>(), std::declval<OptInt&>()));
+      const bool noexceptTraitCheck = internal::is_noexcept_swappable<OptInt, OptInt>::value;
+      LOG << "swap noexcept    : " << (swapNoexcept ? "Ok" : "FAILED!");
+      LOG << "trait noexcept   : " << (noexceptTraitCheck ? "Ok" : "FAILED!");
+    }
+    {
+      struct NonThrowMoveCtor { int dummy; NonThrowMoveCtor(NonThrowMoveCtor&&) noexcept {} };
+      using OptStruct = Optional<NonThrowMoveCtor>;
+      
+      const bool swapNoexcept = noexcept(swap(std::declval<OptStruct&>(), std::declval<OptStruct&>()));
+      const bool noexceptTraitCheck = internal::is_noexcept_swappable<OptStruct, OptStruct>::value;
+      LOG << "swap noexcept    : " << (swapNoexcept ? "Ok" : "FAILED!");
+      LOG << "trait noexcept   : " << (noexceptTraitCheck ? "Ok" : "FAILED!");
+    }
+    {
+      struct ThrowingMoveCtor { int dummy; ThrowingMoveCtor(ThrowingMoveCtor&&) noexcept(false) {}};
+      using OptThrowStruct = Optional<ThrowingMoveCtor>;
+      
+      const bool swapStructNoexcept = noexcept(swap(std::declval<OptThrowStruct&>(), std::declval<OptThrowStruct&>()));
+      const bool noexceptStructTraitCheck = internal::is_noexcept_swappable<OptThrowStruct, OptThrowStruct>::value;
+      LOG << "swap noexcept    : " << (swapStructNoexcept ? "FAILED!" : "Ok");
+      LOG << "trait noexcept   : " << (noexceptStructTraitCheck ? "FAILED!" : "Ok");
+    }
+  }
+
+  LOG << "";
 
   // integer
   {
@@ -39,6 +71,16 @@ int main()
     LOG << "Empty value_or   : " << (empty.value_or(5) == 5 ? "Ok" : "FAILED!");
     LOG << "";
     Optional<int> integer(10);
+    LOG << "Integer has_value: " << (integer.has_value() ? "Ok" : "FAILED!");
+    LOG << "Integer has_value: " << (integer ? "Ok" : "FAILED!");
+    LOG << "Integer value    : " << (integer.value() == 10 ? "Ok" : "FAILED!");
+    LOG << "Integer value_or : " << (integer.value_or(5) == 10 ? "Ok" : "FAILED!");
+    LOG << "";
+    Optional<int> assign = integer;
+    LOG << "Assign has_value : " << (assign.has_value() ? "Ok" : "FAILED!");
+    LOG << "Assign has_value : " << (assign ? "Ok" : "FAILED!");
+    LOG << "Assign value     : " << (assign.value() == 10 ? "Ok" : "FAILED!");
+    LOG << "Assign value_or  : " << (assign.value_or(5) == 10 ? "Ok" : "FAILED!");
     LOG << "Integer has_value: " << (integer.has_value() ? "Ok" : "FAILED!");
     LOG << "Integer has_value: " << (integer ? "Ok" : "FAILED!");
     LOG << "Integer value    : " << (integer.value() == 10 ? "Ok" : "FAILED!");

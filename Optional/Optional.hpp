@@ -7,14 +7,14 @@
 
 namespace internal {
 
-template <typename T>
-inline constexpr typename std::remove_reference<T>::type&& constexpr_move(T&& t) noexcept
-{
-  return static_cast<typename std::remove_reference<T>::type&&>(t);
-}
-
 template<typename T>
 using non_const_t = typename std::remove_const<T>::type;
+
+template<typename T, typename U>
+struct is_noexcept_swappable
+{
+  static constexpr bool value = noexcept(swap(std::declval<T&>(), std::declval<U&>()));
+};
 
 template<typename T>
 struct storage_base
@@ -35,7 +35,7 @@ struct storage_base
   {}
 
   explicit constexpr storage_base(T &&val) noexcept
-    : value{constexpr_move(val)}, engaged{true}
+    : value{std::move(val)}, engaged{true}
   {}
 };
 
@@ -81,6 +81,15 @@ class Optional
   constexpr const T* get() const { return std::addressof(m_storage.value); }
   internal::non_const_t<T>* get() { return std::addressof(m_storage.value); }
 
+  template<typename ...Args>
+  void init(Args&& ...args)
+  {
+    assert(!m_storage.engaged);
+
+    ::new(static_cast<void*>(get())) T(std::forward<Args>(args)...);
+    m_storage.engaged = true;
+  }
+
 public:
   Optional() = default; 
 
@@ -89,7 +98,7 @@ public:
   {}
 
   constexpr Optional(T &&val) noexcept
-    : m_storage(internal::constexpr_move(val))
+    : m_storage(std::move(val))
   {}
 
   Optional(const Optional<T> &other)
@@ -107,7 +116,7 @@ public:
   {
     if(other.has_value())
     {
-      ::new(static_cast<void*>(get())) T(internal::constexpr_move(*other));
+      ::new(static_cast<void*>(get())) T(std::move(*other));
       m_storage.engaged = true;
     }
   }
@@ -117,7 +126,7 @@ public:
   const T& operator*() const & { assert(has_value()); return m_storage.value; }
   T& operator*() & { assert(has_value()); return m_storage.value; }
 
-  T&& operator*() && { assert(has_value()); return internal::constexpr_move(m_storage.value); }
+  T&& operator*() && { assert(has_value()); return std::move(m_storage.value); }
 
   constexpr explicit operator bool() const noexcept { return m_storage.engaged; }
   constexpr bool has_value() const noexcept { return m_storage.engaged; }
@@ -125,15 +134,24 @@ public:
   const T& value() const & { return **this; }
   T& value() & { return **this; }
 
-  T&& value() && { return **this; }
+  T&& value() && { return std::move(**this); }
 
   template<typename U = internal::non_const_t<T>>
-  T value_or(U &&u) const
+  T value_or(U &&u) const&
   {
     if(has_value())
       return **this;
    
-    return u;
+    return std::forward<U>(u);
+  }
+
+  template<typename U = internal::non_const_t<T>>
+  T&& value_or(U &&u) &&
+  {
+    if(has_value())
+      return std::move(**this);
+   
+    return std::forward(u);
   }
 
   void reset() noexcept
@@ -141,23 +159,37 @@ public:
     if(has_value())
     {
       get()->T::~T();
-      m_storage.engaged = false;
     }
+
+    m_storage.engaged = false;
   }
 
-#if 0
-  void swap(Optional<T> &other) noexcept(std::is_nothrow_move_constructible_v<T> && std::is_nothrow_swappable_v<T>)
+  Optional<T>& operator=(Optional<T> other) noexcept(internal::is_noexcept_swappable<Optional<T>, Optional<T>>::value)
   {
-    using std::swap;
-    if(m_storage.engaged && other.m_storage.engaged)
-      ;
-    else if(m_storage.engaged)
-      ;
-    else if(other.m_storage.engaged)
-      ;
+    swap(*this, other);
+    return *this;
+  }
+
+  friend void swap(Optional<T> &lhs, Optional<T> &rhs) noexcept(std::is_nothrow_move_constructible<T>::value)
+  {
+    if(lhs.has_value() && rhs.has_value())
+    {
+      using std::swap;
+      swap(*lhs, *rhs);
+    }
+    else if(lhs.has_value() && !rhs.has_value())
+    {
+      rhs.init(std::move(*lhs));
+
+      lhs.reset();
+    }
+    else if(!lhs.has_value() && rhs.has_value())
+    {
+      lhs.init(std::move(*rhs));
+      rhs.reset();
+    }
 
   }  
-#endif
 };
 
 #endif
