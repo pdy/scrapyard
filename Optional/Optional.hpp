@@ -10,10 +10,10 @@ namespace internal {
 template<typename T>
 using non_const_t = typename std::remove_const<T>::type;
 
-template<typename T, typename U>
+template<typename T>
 struct is_noexcept_swappable
 {
-  static constexpr bool value = noexcept(swap(std::declval<T&>(), std::declval<U&>()));
+  static constexpr bool value = noexcept(swap(std::declval<T&>(), std::declval<T&>()));
 };
 
 template<typename T>
@@ -157,14 +157,12 @@ public:
   void reset() noexcept
   {
     if(has_value())
-    {
       get()->T::~T();
-    }
-
+    
     m_storage.engaged = false;
   }
 
-  Optional<T>& operator=(Optional<T> other) noexcept(internal::is_noexcept_swappable<Optional<T>, Optional<T>>::value)
+  Optional<T>& operator=(Optional<T> other) noexcept(internal::is_noexcept_swappable<Optional<T>>::value)
   {
     swap(*this, other);
     return *this;

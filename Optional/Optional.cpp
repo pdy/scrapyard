@@ -37,7 +37,7 @@ int main()
     {
       using OptInt = Optional<int>;
       const bool swapNoexcept = noexcept(swap(std::declval<OptInt&>(), std::declval<OptInt&>()));
-      const bool noexceptTraitCheck = internal::is_noexcept_swappable<OptInt, OptInt>::value;
+      const bool noexceptTraitCheck = internal::is_noexcept_swappable<OptInt>::value;
       LOG << "swap noexcept    : " << (swapNoexcept ? "Ok" : "FAILED!");
       LOG << "trait noexcept   : " << (noexceptTraitCheck ? "Ok" : "FAILED!");
     }
@@ -46,7 +46,7 @@ int main()
       using OptStruct = Optional<NonThrowMoveCtor>;
       
       const bool swapNoexcept = noexcept(swap(std::declval<OptStruct&>(), std::declval<OptStruct&>()));
-      const bool noexceptTraitCheck = internal::is_noexcept_swappable<OptStruct, OptStruct>::value;
+      const bool noexceptTraitCheck = internal::is_noexcept_swappable<OptStruct>::value;
       LOG << "swap noexcept    : " << (swapNoexcept ? "Ok" : "FAILED!");
       LOG << "trait noexcept   : " << (noexceptTraitCheck ? "Ok" : "FAILED!");
     }
@@ -55,7 +55,7 @@ int main()
       using OptThrowStruct = Optional<ThrowingMoveCtor>;
       
       const bool swapStructNoexcept = noexcept(swap(std::declval<OptThrowStruct&>(), std::declval<OptThrowStruct&>()));
-      const bool noexceptStructTraitCheck = internal::is_noexcept_swappable<OptThrowStruct, OptThrowStruct>::value;
+      const bool noexceptStructTraitCheck = internal::is_noexcept_swappable<OptThrowStruct>::value;
       LOG << "swap noexcept    : " << (swapStructNoexcept ? "FAILED!" : "Ok");
       LOG << "trait noexcept   : " << (noexceptStructTraitCheck ? "FAILED!" : "Ok");
     }
