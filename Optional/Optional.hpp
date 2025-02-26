@@ -162,6 +162,17 @@ public:
     m_storage.engaged = false;
   }
 
+  template<typename U = T>
+  Optional<T>& operator=(U &&val)
+  {
+    if(has_value())
+      m_storage.value = std::forward<U>(val);
+    else
+      init(std::forward<U>(val));
+
+    return *this;
+  }
+
   Optional<T>& operator=(Optional<T> other) noexcept(internal::is_noexcept_swappable<Optional<T>>::value)
   {
     swap(*this, other);
