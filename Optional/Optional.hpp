@@ -5,7 +5,7 @@
 #include <type_traits>
 #include <assert.h>
 
-namespace internal {
+namespace detail {
 
 template<typename T>
 using non_const_t = typename std::remove_const<T>::type;
@@ -14,6 +14,16 @@ template<typename T>
 struct is_noexcept_swappable
 {
   static constexpr bool value = noexcept(swap(std::declval<T&>(), std::declval<T&>()));
+};
+
+template<typename T, typename TSelf, typename Tag>
+struct AddArrowOperator {};
+
+template<typename T, typename TSelf>
+struct AddArrowOperator<T, TSelf, std::false_type>
+{
+  const T* operator->() const { return &(static_cast<const TSelf*>(this)->value()); }
+  T* operator->() { return &(static_cast<TSelf*>(this)->value()); }
 };
 
 template<typename T>
@@ -71,15 +81,13 @@ using optional_storage = typename std::conditional<
 } // namespace internal
 
 
-
-
 template<typename T>
-class Optional
+class Optional final : public detail::AddArrowOperator<T, Optional<T>, typename std::is_arithmetic<T>::type>
 {
-  internal::optional_storage<T> m_storage;
+  detail::optional_storage<T> m_storage;
 
   constexpr const T* get() const { return std::addressof(m_storage.value); }
-  internal::non_const_t<T>* get() { return std::addressof(m_storage.value); }
+  detail::non_const_t<T>* get() { return std::addressof(m_storage.value); }
 
   template<typename ...Args>
   void init(Args&& ...args)
@@ -136,7 +144,7 @@ public:
 
   T&& value() && { return std::move(**this); }
 
-  template<typename U = internal::non_const_t<T>>
+  template<typename U = detail::non_const_t<T>>
   T value_or(U &&u) const&
   {
     if(has_value())
@@ -145,13 +153,13 @@ public:
     return std::forward<U>(u);
   }
 
-  template<typename U = internal::non_const_t<T>>
+  template<typename U = detail::non_const_t<T>>
   T&& value_or(U &&u) &&
   {
     if(has_value())
       return std::move(**this);
    
-    return std::forward(u);
+    return std::forward<U>(u);
   }
 
   void reset() noexcept
@@ -173,7 +181,7 @@ public:
     return *this;
   }
 
-  Optional<T>& operator=(Optional<T> other) noexcept(internal::is_noexcept_swappable<Optional<T>>::value)
+  Optional<T>& operator=(Optional<T> other) noexcept(detail::is_noexcept_swappable<Optional<T>>::value)
   {
     swap(*this, other);
     return *this;
