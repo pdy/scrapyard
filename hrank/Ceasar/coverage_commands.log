@@ -1,0 +1,3 @@
+gcov -c -s ../../ Ceasar.cpp
+lcov --branch-coverage --capture --directory . --output-file lcov-report/lcov_branch_coverage.info
+genhtml --branch-coverage lcov-report/lcov_branch_coverage.info --output-directory lcov-report/

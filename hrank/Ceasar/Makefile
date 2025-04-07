@@ -1,6 +1,7 @@
 print-%  : ; @echo $* = $($*)
 
-CXX := clang++
+#CXX := clang++
+CXX := g++
 
 FLAGS := -std=c++20 -Wno-deprecated-register -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-padded
 
@@ -15,7 +16,13 @@ CXXFLAGS = $(FLAGS) $(INCLUDES) -O3 -Wall
 STRIP := strip
 ifneq (, $(findstring debug,$(MAKECMDGOALS)))
 	BUILD = ./bin/debug
-	CXXFLAGS = $(FLAGS) $(INCLUDES) -g -Weverything
+	CXXFLAGS = $(FLAGS) $(INCLUDES) -g #-Weverything
+	STRIP = echo
+endif
+
+ifneq (, $(findstring coverage,$(MAKECMDGOALS)))
+	BUILD = ./bin/coverage
+	CXXFLAGS = $(FLAGS) $(INCLUDES) -fPIC -fprofile-arcs -ftest-coverage -g 
 	STRIP = echo
 endif
 
@@ -24,6 +31,7 @@ endif
 all: post-build
 debug: all
 release: all
+coverage: all
 
 pre-build:
 	@mkdir -p $(BUILD) # prep dist 
