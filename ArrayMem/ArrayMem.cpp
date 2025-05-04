@@ -44,6 +44,17 @@ void test(const ArrayView<T> &view)
   std::cout << '\n';
 }
 
+struct SomeType
+{
+  int content{0};
+  float fcontent{.0};
+};
+
+inline std::ostream& operator<<(std::ostream &oss, const SomeType &st)
+{
+  return oss << "[" << st.content << "] [" << st.fcontent << "]";
+}
+
 int main()
 {
   LOG << "Hello Array!";
@@ -53,6 +64,11 @@ int main()
   ArrayView<int> intView(integers);
   test(intView);
 
+  const SomeType structs[4] { {0, 0.1f}, {1, 0.2f}, {2, 0.3f}, {3, 0.4f}};
+  ArrayView<const SomeType> podView(structs);
+  test(podView);
+
+  
 
   return 0;
 }
