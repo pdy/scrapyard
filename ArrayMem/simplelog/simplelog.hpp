@@ -50,6 +50,12 @@ public:
     return *this;
   }
 
+  SimpleLog& operator<<(void *ptr)
+  {
+    m_ss << ptr;
+    return *this;
+  }
+
   SimpleLog& operator<<(const std::string &str)
   {
     m_ss << str;

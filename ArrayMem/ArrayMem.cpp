@@ -23,7 +23,11 @@
 *
 */
 
+#include <cmath>
 #include <cmdline.h> 
+#include <cstddef>
+#include <cstdlib>
+#include <limits>
 #include "simplelog/simplelog.hpp"
 
 #include "Array.hpp"
@@ -46,17 +50,47 @@ void test(const ArrayView<T> &view)
 
 struct SomeType
 {
-  int content{0};
+  short content{0};
   float fcontent{.0};
 };
 
 inline std::ostream& operator<<(std::ostream &oss, const SomeType &st)
 {
-  return oss << "[" << st.content << "] [" << st.fcontent << "]";
+  return oss << "short [" << st.content << "] float [" << st.fcontent << "]";
+}
+
+template<typename T, size_t SIZE, typename CastType = int>
+inline void printArray(T (&arr)[SIZE])
+{
+  std::cout << "buff value [";
+  for(size_t i = 0; i < SIZE; ++i)
+  {
+    std::cout << std::dec << static_cast<CastType>(arr[i]);
+    if(i != SIZE - 1)
+      std::cout << " ";
+  }
+  std::cout << ']';
+}
+
+inline bool isPowerofTwo(uintptr_t n)
+{
+  return (n & (n - 1)) == 0;
+#if 0
+  if (n <= 0)
+    return false;
+  
+  // Calculate log base 2 of n
+  const int logValue = (int)std::log2(n);
+  
+  // Check if log2(n) is an integer
+  // and 2^(logn) = n
+  return pow(2, logValue) == n;
+#endif
 }
 
 int main()
 {
+  /*
   LOG << "Hello Array!";
 
   int integers[10] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
@@ -67,8 +101,40 @@ int main()
   const SomeType structs[4] { {0, 0.1f}, {1, 0.2f}, {2, 0.3f}, {3, 0.4f}};
   ArrayView<const SomeType> podView(structs);
   test(podView);
+*/
 
+
+  static constexpr size_t ALIGN = alignof(SomeType);
+  static constexpr size_t SOME_TYPE_SIZE = sizeof(SomeType);
+  /*alignas(SomeType)*/ uint8_t someTypeBuffer[SOME_TYPE_SIZE + ALIGN - 1] = {0};
+//  char *aligned = (char*)((intptr_t)buf + (alignment - 1) & ~intptr_t(alignment - 1));
+  uint8_t *ptr = (uint8_t*)((intptr_t)someTypeBuffer + (ALIGN - 1) & ~intptr_t(ALIGN - 1));
+
+  LOG << "someTypeBuffer pow2 [" << isPowerofTwo((uintptr_t)someTypeBuffer) << "] ptr pow2 [" << isPowerofTwo((uintptr_t)ptr) << ']';
+
+  //uint8_t *someTypeBuffer = new uint8_t(SOME_TYPE_SIZE);
+//  std::cout << "ptr: " << std::dec << (void*)ptr << '\n';
+
+  LOG 
+    << "buff size: " << std::size(someTypeBuffer) 
+    << " start address: [" << someTypeBuffer 
+    << "] align address: [" << ptr 
+    << "] end address [" << (someTypeBuffer + std::size(someTypeBuffer)) 
+    << "] align diff [" << (someTypeBuffer + std::size(someTypeBuffer)) - ptr << ']';
   
+  printArray(someTypeBuffer);
+  LOG << "";
+
+  SomeType *someTypeNew = ::new(ptr) SomeType;
+  someTypeNew->content = 5;//std::numeric_limits<short>::max();
+  someTypeNew->fcontent = std::numeric_limits<float>::max();
+  printArray(someTypeBuffer);
+  LOG << "";
+  LOG << "content: " << someTypeNew->content;
+  LOG << "fcontent: " << someTypeNew->fcontent;
+
+  LOG << "SomeType align: " << alignof(SomeType);
+//  LOG << "max align: " << alignof(std::max_align_t);
 
   return 0;
 }
