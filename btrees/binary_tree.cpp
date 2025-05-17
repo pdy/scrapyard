@@ -215,7 +215,7 @@ static void preOrderTest()
 static void inOrderTest()
 {
 
-  // pre-order == Root - Left - Right
+  // in-order == Left - Root - Right
 
   /*
    *                  1
