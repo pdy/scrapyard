@@ -34,6 +34,7 @@ post-build: main-build
 main-build: pre-build
 	@$(MAKE) --no-print-directory $(BUILD)/ranges
 	@$(MAKE) --no-print-directory $(BUILD)/construct
+	@$(MAKE) --no-print-directory $(BUILD)/concepts
 	
 clean:
 	@rm -r ./bin
