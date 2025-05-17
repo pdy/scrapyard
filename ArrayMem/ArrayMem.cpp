@@ -88,6 +88,11 @@ inline bool isPowerofTwo(uintptr_t n)
 #endif
 }
 
+inline bool isDivisibleBy(uintptr_t n, size_t by)
+{
+  return n % by == 0;
+}
+
 int main()
 {
   /*
@@ -111,6 +116,7 @@ int main()
   uint8_t *ptr = (uint8_t*)((intptr_t)someTypeBuffer + (ALIGN - 1) & ~intptr_t(ALIGN - 1));
 
   LOG << "someTypeBuffer pow2 [" << isPowerofTwo((uintptr_t)someTypeBuffer) << "] ptr pow2 [" << isPowerofTwo((uintptr_t)ptr) << ']';
+  LOG << "someTypeBuffer div" << ALIGN << " [" << isDivisibleBy((uintptr_t)someTypeBuffer, ALIGN) << "] ptr div" << ALIGN  << " [" << isDivisibleBy((uintptr_t)ptr, ALIGN) << ']';
 
   //uint8_t *someTypeBuffer = new uint8_t(SOME_TYPE_SIZE);
 //  std::cout << "ptr: " << std::dec << (void*)ptr << '\n';
@@ -135,6 +141,10 @@ int main()
 
   LOG << "SomeType align: " << alignof(SomeType);
 //  LOG << "max align: " << alignof(std::max_align_t);
+
+
+  LOG << "is 2 power of two: " << isPowerofTwo(2);
+  LOG << "is 4 power of two: " << isPowerofTwo(4);
 
   return 0;
 }
