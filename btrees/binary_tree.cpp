@@ -179,7 +179,7 @@ static size_t height(NumNode *node)
 static void preOrderTest()
 {
 
-  // in-order == Root - Left - Right
+  // pre-order == Root - Left - Right
 
   /*
    *                  1
