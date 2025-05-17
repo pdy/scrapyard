@@ -183,7 +183,7 @@ static void preOrderTest()
 
   /*
    *                  1
-   *                 2  3   
+   *                 2  3
    *               4 5   6
    *                      7
    *
@@ -208,8 +208,8 @@ static void preOrderTest()
 
   const std::string_view EXPECTED = "1 2 4 5 3 6 7 ";
 
-  LOG << "preOrder rec " << (EXPECTED == preOrder(&root) ? "Ok" : "Fail!"); 
-  LOG << "preOrder  it " << (EXPECTED == preOrderIt(&root) ? "Ok" : "Fail!"); 
+  LOG << "preOrder rec " << (EXPECTED == preOrder(&root) ? "Ok" : "Fail!");
+  LOG << "preOrder  it " << (EXPECTED == preOrderIt(&root) ? "Ok" : "Fail!");
 }
 
 static void inOrderTest()
@@ -219,7 +219,7 @@ static void inOrderTest()
 
   /*
    *                  1
-   *                 2  3   
+   *                 2  3
    *               4 5   6
    *                      7
    *
@@ -244,8 +244,8 @@ static void inOrderTest()
 
   const std::string_view EXPECTED = "4 2 5 1 3 6 7 ";
 
-  LOG << "inOrder rec " << (EXPECTED == inOrder(&root) ? "Ok" : "Fail!"); 
-  LOG << "inOrder it  " << (EXPECTED == inOrderIt(&root) ? "Ok" : "Fail!"); 
+  LOG << "inOrder rec " << (EXPECTED == inOrder(&root) ? "Ok" : "Fail!");
+  LOG << "inOrder it  " << (EXPECTED == inOrderIt(&root) ? "Ok" : "Fail!");
 }
 
 static void postOrderTest()
@@ -255,7 +255,7 @@ static void postOrderTest()
 
   /*
    *                  1
-   *                 2  3   
+   *                 2  3
    *               4 5   6
    *                      7
    *
@@ -280,7 +280,7 @@ static void postOrderTest()
 
   const std::string_view EXPECTED ="4 5 2 7 6 3 1 ";
 
-  LOG << "postOrder " << (EXPECTED == postOrder(&root) ? "Ok" : "Fail!"); 
+  LOG << "postOrder " << (EXPECTED == postOrder(&root) ? "Ok" : "Fail!");
 }
 
 static void heightTest()
@@ -288,7 +288,7 @@ static void heightTest()
 
   /*
    *                  1
-   *                 2  3   
+   *                 2  3
    *               4 5   6
    *                      7
    *
@@ -311,10 +311,62 @@ static void heightTest()
   right_3.right = &right_6;
   right_6.right = &right_7;
 
-  const size_t EXPECTED = 4; 
+  const size_t EXPECTED = 4;
 
-  LOG << "height " << (EXPECTED == height(&root) ? "Ok" : "Fail!"); 
+  LOG << "height " << (EXPECTED == height(&root) ? "Ok" : "Fail!");
 }
+
+static void heightTest_2()
+{
+
+  /*
+   *                  1
+   *                 2  3
+   *               4 5    6
+   *                 12 3  7
+   *                11   2
+   *                 13
+   */
+
+  NumNode root{.data = 1};
+  NumNode left_2 {.data = 2};
+  NumNode left_4 {.data = 4};
+  NumNode right_5 {.data = 5};
+  NumNode right_12 {.data = 12};
+  NumNode left_11 {.data = 11};
+  NumNode right_13 {.data = 13};
+
+  { // left
+    root.left = &left_2;
+    left_2.left = &left_4;
+    left_2.right = &right_5;
+
+    right_5.right = &right_12;
+    right_12.left = &left_11;
+    left_11.right = &right_13;
+  }
+
+  NumNode right_3{.data = 3};
+  NumNode right_6{.data = 6};
+  NumNode right_7{.data = 7};
+  NumNode left_3{.data = 3};
+  NumNode right_2{.data = 2};
+
+  { // right
+    root.right = &right_3;
+    right_3.right = &right_6;
+    right_6.right = &right_7;
+    right_6.left = &left_3;
+
+    left_3.right = &right_2;
+
+  }
+
+  const size_t EXPECTED = 6;
+
+  LOG << "height_2 " << (EXPECTED == height(&root) ? "Ok" : "Fail!");
+}
+
 
 static void bstInOrderTests()
 {
@@ -357,6 +409,7 @@ int main()
   bstInOrderTests();
   postOrderTest();
   heightTest();
+  heightTest_2();
   return 0;
 }
 
