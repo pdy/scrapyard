@@ -138,6 +138,41 @@ static void postOrder_recursive(NumNode *node, std::string &answer)
   answer.push_back(' ');
 }
 
+static std::string postOrderIt(NumNode *node)
+{
+  // Left - Right - Root
+
+  std::string answer;
+
+  std::stack<NumNode*> stack_1, stack_2;
+  NumNode *it = nullptr;
+  stack_1.push(node);
+  while(!stack_1.empty())
+  {
+    it = stack_1.top();
+    stack_1.pop();
+
+    stack_2.push(it);
+
+    if(it->left)
+      stack_1.push(it->left);
+    if(it->right)
+      stack_1.push(it->right);
+  }
+
+  while(!stack_2.empty())
+  {
+    it = stack_2.top();
+
+    answer.append(std::to_string(it->data));
+    answer.push_back(' ');
+
+    stack_2.pop();
+  }
+
+  return answer;
+}
+
 static std::string preOrder(NumNode *node)
 {
   // pre-order == Root - Left - Right
@@ -281,6 +316,7 @@ static void postOrderTest()
   const std::string_view EXPECTED ="4 5 2 7 6 3 1 ";
 
   LOG << "postOrder " << (EXPECTED == postOrder(&root) ? "Ok" : "Fail!");
+  LOG << "postOrderIt " << (EXPECTED == postOrderIt(&root) ? "Ok" : "Fail!");
 }
 
 static void heightTest()
