@@ -211,6 +211,18 @@ static size_t height(NumNode *node)
   return std::max(lh, rh);
 }
 
+
+static void mirror(NumNode *node)
+{
+  if(!node)
+    return;
+
+  mirror(node->left);
+  mirror(node->right);
+
+  std::swap(node->left, node->right);
+}
+
 static void preOrderTest()
 {
 
@@ -403,6 +415,54 @@ static void heightTest_2()
   LOG << "height_2 " << (EXPECTED == height(&root) ? "Ok" : "Fail!");
 }
 
+static void mirrorTest()
+{
+
+  /*
+   *                  1
+   *                 2  3
+   *               4 5   6
+   *                      7
+   *
+   */
+
+  NumNode root{.data = 1};
+  NumNode left_2 {.data = 2};
+  NumNode left_4 {.data = 4};
+  NumNode right_5 {.data = 5};
+
+  root.left = &left_2;
+  left_2.left = &left_4;
+  left_2.right = &right_5;
+
+  NumNode right_3{.data = 3};
+  NumNode right_6{.data = 6};
+  NumNode right_7{.data = 7};
+
+  root.right = &right_3;
+  right_3.right = &right_6;
+  right_6.right = &right_7;
+
+  // mirror
+  mirror(&root);
+
+  // expected
+  /*
+   *                  1
+   *                3   2
+   *               6   5 4
+   *              7
+   *
+   */
+
+
+
+  const std::string_view EXPECTED = "7 6 3 1 5 2 4 ";
+
+  LOG << "mirror " << (EXPECTED == inOrderIt(&root) ? "Ok" : "Fail!");
+}
+
+
 
 static void bstInOrderTests()
 {
@@ -446,6 +506,7 @@ int main()
   postOrderTest();
   heightTest();
   heightTest_2();
+  mirrorTest();
   return 0;
 }
 
