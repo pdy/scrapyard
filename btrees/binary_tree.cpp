@@ -38,6 +38,34 @@ struct Node
 
 using NumNode = Node<int>;
 
+static NumNode *insert(NumNode *root, int data)
+{
+  if(!root)
+    return new NumNode{.data = data};
+
+  if(data <= root->data)
+  {
+    root->left = insert(root->left, data);
+  }
+  else
+  {
+    root->right = insert(root->right, data);
+  }
+
+  return root;
+}
+
+static NumNode *createBst(std::vector<int> nums)
+{
+  NumNode *ret {nullptr};
+
+  for(int num : nums)
+    ret = insert(ret, num);
+
+  return ret;
+}
+
+
 static void preOrder_recursive(NumNode *node, std::string &answer)
 {
   // pre-order == Root - Left - Right
@@ -221,6 +249,40 @@ static void mirror(NumNode *node)
   mirror(node->right);
 
   std::swap(node->left, node->right);
+}
+
+static std::string topView(NumNode *node)
+{
+  if(!node)
+    return {};
+
+  std::stack<NumNode*> stack;
+  NumNode *it = node;
+  while(it)
+  {
+    stack.push(it);
+    it = it->left;
+  }
+
+  std::string answer;
+  while(!stack.empty())
+  {
+    answer.append(std::to_string(stack.top()->data));
+    stack.pop();
+    if(!stack.empty())
+      answer.push_back(' ');
+  }
+
+  it = node->right;
+  while(it)
+  {
+    answer.push_back(' ');
+    answer.append(std::to_string(it->data));
+
+    it = it->right;
+  }
+
+  return answer;
 }
 
 static void preOrderTest()
@@ -462,7 +524,53 @@ static void mirrorTest()
   LOG << "mirror " << (EXPECTED == inOrderIt(&root) ? "Ok" : "Fail!");
 }
 
+static void topViewTest()
+{
 
+  /*
+   *                  1
+   *                 2  3
+   *               4 5   6
+   *                      7
+   *
+   */
+
+  NumNode root{.data = 1};
+  NumNode left_2 {.data = 2};
+  NumNode left_4 {.data = 4};
+  NumNode right_5 {.data = 5};
+
+  root.left = &left_2;
+  left_2.left = &left_4;
+  left_2.right = &right_5;
+
+  NumNode right_3{.data = 3};
+  NumNode right_6{.data = 6};
+  NumNode right_7{.data = 7};
+
+  root.right = &right_3;
+  right_3.right = &right_6;
+  right_6.right = &right_7;
+
+  const std::string_view EXPECTED = "4 2 1 3 6 7";
+
+//  LOG << "topView result [" << topView(&root) << "]";
+  LOG << "topView " << (EXPECTED == topView(&root) ? "Ok" : "Fail!");
+}
+
+static void topViewTest_2()
+{
+  NumNode *root = createBst({1, 14, 3, 7, 4, 5, 15, 6, 13, 10, 11, 2, 12, 8, 9});
+
+  LOG << "topView_2 inorder: " << inOrder(root);
+  LOG << "topView_2 preorder: " << preOrder(root);
+  LOG << "topView_2 postOrder: " << postOrder(root);
+
+  const std::string_view EXPECTED = "2 1 14 15 12";
+
+  LOG << "topView_2 result [" << topView(root) << "]";
+  LOG << "topView_2 " << (EXPECTED == topView(root) ? "Ok" : "Fail!");
+}
 
 static void bstInOrderTests()
 {
@@ -507,6 +615,8 @@ int main()
   heightTest();
   heightTest_2();
   mirrorTest();
+  topViewTest();
+  topViewTest_2();
   return 0;
 }
 
