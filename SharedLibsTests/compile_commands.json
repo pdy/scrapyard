@@ -1,0 +1,47 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/g++",
+      "-c",
+      "-std=c++20",
+      "-Wno-deprecated-register",
+      "-Wno-c++98-compat",
+      "-Wno-c++98-compat-pedantic",
+      "-Wno-padded",
+      "-isystemcmdline",
+      "-O3",
+      "-Wall",
+      "-isystem/home/songoku/repo/openssl_1.1.1/build_111w/include",
+      "-fPIC",
+      "-pthread",
+      "-o",
+      "bin/release/rsa_pem_to_der.o",
+      "rsa_pem_to_der.cpp"
+    ],
+    "directory": "/home/songoku/repo/scrapyard/SharedLibsTests",
+    "file": "/home/songoku/repo/scrapyard/SharedLibsTests/rsa_pem_to_der.cpp",
+    "output": "/home/songoku/repo/scrapyard/SharedLibsTests/bin/release/rsa_pem_to_der.o"
+  },
+  {
+    "arguments": [
+      "/usr/bin/g++",
+      "-c",
+      "-std=c++20",
+      "-Wno-deprecated-register",
+      "-Wno-c++98-compat",
+      "-Wno-c++98-compat-pedantic",
+      "-Wno-padded",
+      "-isystemcmdline",
+      "-O3",
+      "-Wall",
+      "-isystem/home/songoku/repo/openssl_1.1.1/build_111s/include",
+      "-pthread",
+      "-o",
+      "bin/release/SharedLibsTests",
+      "SharedLibsTests.cpp"
+    ],
+    "directory": "/home/songoku/repo/scrapyard/SharedLibsTests",
+    "file": "/home/songoku/repo/scrapyard/SharedLibsTests/SharedLibsTests.cpp",
+    "output": "/home/songoku/repo/scrapyard/SharedLibsTests/bin/release/SharedLibsTests"
+  }
+]
