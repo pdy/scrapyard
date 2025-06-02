@@ -16,7 +16,7 @@ OSSL_111w_INCLUDES := -isystem$(OSSL_111w_PATH)/include
 LD_FLAGS := -L$(OSSL_111s_PATH)/lib
 LD_SHARED_FLAGS := -L$(OSSL_111w_PATH)/lib
 
-#LD_LIBS := -Wl,-Bstatic -lssl -lcrypto -Wl,-Bdynamic -pthread -ldl
+#LD_LIBS := -Wl,-Bstatic -lssl -lcrypto -Wl,-Bdynamic -lrsa_pem_to_der -pthread -ldl
 LD_LIBS := -Wl,-Bdynamic -lrsa_pem_to_der -pthread -ldl
 LD_SHARED_LIBS := -Wl,-Bstatic -lssl -lcrypto -Wl,-Bdynamic -pthread -ldl
 

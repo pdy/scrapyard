@@ -32,7 +32,7 @@
 
 static void logAppOsslVersion()
 {
-  LOG << "App is using " << OpenSSL_version(OPENSSL_VERSION);
+  LOG << "Executable is using " << OpenSSL_version(OPENSSL_VERSION);
 }
 #if 0
 static std::vector<uint8_t> pem2der(const char *pem, size_t pemLen)
@@ -78,7 +78,6 @@ int main(int argc, char *argv[])
 
 
   logAppOsslVersion();
-  LOG << "";
   logLibOsslVersion();
 
   return 0;
