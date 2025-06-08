@@ -1,4 +1,4 @@
-#include <iostream>
+#include "simplelog/simplelog.hpp"
 
 static void func(int **p)
 {
@@ -8,12 +8,13 @@ static void func(int **p)
 
 int main()
 {
+  
   int var = 5;
   int *ref = &var;
   func(&ref);
 
-  std::cout << *ref << '\n';
+  LOG << "ref " << *ref;
 
-//  auto * ptr = new int;
+  //  auto * ptr = new int;
   return 0;
 }
