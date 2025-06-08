@@ -1,8 +1,8 @@
-#include <iostream>
+#include "simplelog/simplelog.hpp"
 
 class Point
 {
-  int m_x{0}, m_y{0}, m_z{0};
+  int m_x, m_y, m_z;
 
 public:
   Point(int x, int y, int z)
@@ -15,7 +15,7 @@ public:
 int main()
 {
   Point p(5, 6, 7);
-  std::cout << "sum class " << p.sum_xy() << '\n';
+  LOG << "sum class " << p.sum_xy();
 
   return 0;
 }
