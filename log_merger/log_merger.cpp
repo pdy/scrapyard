@@ -28,6 +28,7 @@
 #include <cassert>
 #include <cstring>
 #include <filesystem>
+#include <memory>
 
 namespace fs = std::filesystem;
 
@@ -46,20 +47,21 @@ static void usage()
 
 struct FnamesMemory
 {
-  char *data {nullptr};
+  std::unique_ptr<char[]> memory {nullptr};
   size_t regionCount {0};
 
   const size_t maxCount {0};
   const size_t regionSize {0};
 
-  explicit operator bool() const { return data != nullptr; }
+  explicit operator bool() const { return memory != nullptr; }
 
+  char *data() const { return memory.get(); }
   bool append(std::string_view str)
   {
     if(regionCount == maxCount)
       return false;
 
-    char *ptr = data + regionSize * regionCount;
+    char *ptr = data() + regionSize * regionCount;
     std::memset(ptr, 0x00, regionSize);
     std::memcpy(ptr, str.data(), str.size());
     ++regionCount;
@@ -70,12 +72,12 @@ struct FnamesMemory
   std::string_view get(size_t idx) const
   {
     assert(idx < regionCount && "Buffer overflow");
-    return data + idx * regionSize;
+    return data() + idx * regionSize;
   }
 
   std::string_view last() const
   {
-    return data + (regionCount - 1) * regionSize;
+    return data() + (regionCount - 1) * regionSize;
   }
 };
 
@@ -86,7 +88,7 @@ static FnamesMemory initFnamesMem(size_t count, size_t regionSize)
     return FnamesMemory{};
 
   return FnamesMemory{
-    .data = data,
+    .memory{data},
     .regionCount = 0,
     .maxCount = count,
     .regionSize = regionSize
@@ -130,6 +132,12 @@ int main(int argc, char *argv[])
     usage();
     return 0;
   }
+  if(!extension.starts_with('.'))
+  {
+    LOG << "Extension need to start wth a dot!";
+    usage();
+    return 0;
+  }
 
 //  LOG << "file limit " << FILE_COUNT_LIMIT;
 //  LOG << "filename " << filename << " extension " << extension;
@@ -154,8 +162,11 @@ int main(int argc, char *argv[])
     }
 
     fnamesArray.append(path.string());
-    LOG << "Added to name pool [" << fnamesArray.last() << "]";
+//    LOG << "Added to name pool [" << fnamesArray.last() << "]";
   }
+
+  for(size_t i = 0; i < fnamesArray.regionCount; ++i)
+    LOG << "Added to name pool [" << fnamesArray.get(i) << "]";
 
   return 0;
    
