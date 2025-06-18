@@ -25,6 +25,7 @@
 
 #include "simplelog/simplelog.hpp"
 
+#include <optional>
 #include <thread>
 #include <atomic>
 #include <cassert>
@@ -70,7 +71,7 @@ struct FileGuardDeleter
   }
 };
 
-using file_guard = std::unique_ptr<FILE, FileGuardDeleter>;
+using FileGuard = std::unique_ptr<FILE, FileGuardDeleter>;
 
 struct FnamesMemory
 {
@@ -147,6 +148,59 @@ static size_t get_size(FILE *file)
 }
 #endif
 
+static std::optional<size_t> read(const std::string &fname, std::unique_ptr<uint8_t[]> &readBuffer, const size_t readBufferSize)
+{
+  LOG << "Trying to read " << fname;
+  FILE *file{ fopen(fname.c_str(), "rb") };
+  if(file)
+  {
+    LOG << " File open ok";
+    FileGuard fguard{file};
+    const auto bytesRead = fread(readBuffer.get(), 1, readBufferSize, file);
+    if(const int error = ferror(file); error != 0)
+    {
+      LOG << " Error [" << error << "] while reading " << fname;
+    }
+    else if(bytesRead == 0)
+    {
+      LOG << " Empty file " << fname;
+    }
+
+    return bytesRead;
+  }
+
+  return std::nullopt;
+}
+
+#if 0
+static bool copy(const std::string &fname, std::unique_ptr<uint8_t[]> &readBuffer, const size_t readBufferSize, FILE &outFile)
+{
+  //
+  if(const auto bytesRead = read(fname, readBuffer, readBufferSize))
+  {
+    //
+    LOG << " File read ok";
+    LOG << " Writing";
+    const size_t bytesWritten = fwrite(readBuffer.get(), 1, *bytesRead, &outFile);
+    if(bytesWritten != bytesRead)
+    {
+      LOG << "Error [" << ferror(&outFile) << "] while writing. ABORTING!";
+      return false;
+    }
+
+    LOG << " File write ok";
+    fwrite(NEWLINE, 1, NEWLINE_LEN, &outFile);
+  }
+  else
+  {
+    // We won't break whole process because of potentially single file error. Just log.
+    LOG << "Couldn't read " << fname;
+  }
+
+  return true;
+}
+#endif
+
 int main(int argc, char *argv[])
 {
   static constexpr size_t FILE_COUNT_LIMIT = 1'048'576;
@@ -205,7 +259,7 @@ int main(int argc, char *argv[])
   auto readBuffer = allocBuffer(READ_BUFF_SIZE);
   if(!readBuffer)
   {
-    LOG << "Cant initialize memory for I/O";
+    LOG << "Cant initialize memory for reading";
     return 1;
   }
 
@@ -216,14 +270,49 @@ int main(int argc, char *argv[])
     return 1;
   }
   
-  file_guard writeFileGuard{mergedLog};
+  FileGuard writeFileGuard{mergedLog};
 
-  std::mutex fnamesMutex;
-  std::atomic_bool finishedPathTraversal = false;
+  auto writeBuffer = allocBuffer(READ_BUFF_SIZE);
+  if(!writeBuffer)
+  {
+    LOG << "Can't initilize memory for writing. Read buffer will be reused";
+  }
+
+  std::mutex fnamesMutex, bufferSwapMutex;
+  std::atomic_bool finishedPathTraversal{false};
+  std::atomic_bool finishedReading{false};
   std::condition_variable fnameAccess;
+  std::condition_variable signalWrite;
+  std::optional<size_t> bytesRead{std::nullopt};
+
   std::jthread writeThread([&]
   {
-    LOG << "Enterig write thred";
+    LOG << "Entering write thread";
+    while(!finishedReading)
+    {
+      std::unique_lock swapLock(bufferSwapMutex);
+      signalWrite.wait(swapLock, [&] { return bytesRead || finishedReading; });
+
+      if(!bytesRead)
+        break;
+
+      const size_t bytesWritten = fwrite(writeBuffer.get(), 1, *bytesRead, mergedLog);
+      if(bytesWritten != bytesRead)
+      {
+        LOG << " Error [" << ferror(mergedLog) << "] while writing. ABORTING!";
+        return;
+      }
+
+      LOG << " File write ok";
+      fwrite(NEWLINE, 1, NEWLINE_LEN, mergedLog);
+      bytesRead.reset();
+    }
+      
+  });
+
+  std::jthread readThread([&]
+  {
+    LOG << "Entering read thread";
     while(!finishedPathTraversal)
     {
       std::unique_lock lock(fnamesMutex);
@@ -232,7 +321,6 @@ int main(int argc, char *argv[])
       if(finishedPathTraversal)
         break;
 
-      LOG << " Locked mutex";
       const std::string fname{fnamesArray.last()};
       fnamesArray.pop_last();
 
@@ -242,107 +330,74 @@ int main(int argc, char *argv[])
       if(fname.empty())
         continue;
 
-      LOG << "Trying to read " << fname;
-      FILE *file{ fopen(fname.c_str(), "rb") };
-      if(file)
+      if(const auto bytesCount = read(fname, readBuffer, READ_BUFF_SIZE))
       {
-        LOG << " File open ok";
-        file_guard fguard{file};
-        const auto bytesRead = fread(readBuffer.get(), 1, READ_BUFF_SIZE, file);
-        if(const int error = ferror(file); error != 0)
-        {
-          LOG << "Error [" << error << "] while reading " << fname;
-        }
-        else if(bytesRead == 0)
-        {
-          LOG << "Empty file " << fname;
-        }
-        else
-        {
-          LOG << " File read ok";
-          LOG << " Writing";
-          const size_t bytesWritten = fwrite(readBuffer.get(), 1, bytesRead, mergedLog);
-          if(bytesWritten != bytesRead)
-          {
-            LOG << "Error [" << ferror(mergedLog) << "] while writing. ABORTING!";
-            return;
-          }
+        LOG << " Read ok " << *bytesCount << " bytes";
+        std::lock_guard swapGuard(bufferSwapMutex);
+        readBuffer.swap(writeBuffer);
+        bytesRead = *bytesCount;
+      }
 
-          LOG << " File write ok";
-          fwrite(NEWLINE, 1, NEWLINE_LEN, mergedLog);
-        }
-      }
-      else
+      signalWrite.notify_one();
+      LOG << "Buffers swapped";
+
+#if 0
+      if(!copy(fname, readBuffer, READ_BUFF_SIZE, *mergedLog))
       {
-        LOG << "Couldn't read " << fname;
+        // we only fail on error when writing so I assume there is no point continuiong if
+        // there is something wrong with output file
+        return;
       }
-    }
+#endif
+   }
 
     // finishedPathTraversal == true
-    // we have fnameArray for ourselves so no more copies and locking
+    // we have fnameArray for ourselves so no more locking
     while(!fnamesArray.empty())
     {
-      LOG << "!!!! IMPLEMENT ME !!!!";
+      LOG << "No Locking copy";
 
-      const std::string fname {fnamesArray.last()};  
+      const std::string fname {fnamesArray.last()};
       fnamesArray.pop_last();
 
-      LOG << "Trying to read " << fname;
-      FILE *file{ fopen(fname.c_str(), "rb") };
-      if(file)
+      if(const auto bytesCount = read(fname, readBuffer, READ_BUFF_SIZE))
       {
-        LOG << " File open ok";
-        file_guard fguard{file};
-        const auto bytesRead = fread(readBuffer.get(), 1, READ_BUFF_SIZE, file);
-        if(const int error = ferror(file); error != 0)
-        {
-          LOG << "Error [" << error << "] while reading " << fname;
-        }
-        else if(bytesRead == 0)
-        {
-          LOG << "Empty file " << fname;
-        }
-        else
-        {
-          LOG << " File read ok";
-          LOG << " Writing";
-          const size_t bytesWritten = fwrite(readBuffer.get(), 1, bytesRead, mergedLog);
-          if(bytesWritten != bytesRead)
-          {
-            LOG << "Error [" << ferror(mergedLog) << "] while writing. ABORTING!";
-            return;
-          }
+        std::lock_guard swapGuard(bufferSwapMutex);
+        readBuffer.swap(writeBuffer);
+        bytesRead = *bytesCount;
+      }
 
-          LOG << " File write ok";
-          fwrite(NEWLINE, 1, NEWLINE_LEN, mergedLog);
-        }
-      }
-      else
-      {
-        LOG << "Couldn't read " << fname;
-      }
+      signalWrite.notify_one();
+      LOG << "Buffers swapped";
+#if 0
+      if(!copy(fname, readBuffer, READ_BUFF_SIZE, *mergedLog))
+        return;
+#endif
     }
+
+    finishedReading = true;
+    signalWrite.notify_all();
 
     LOG << "Exiting read/write thread";
   });
 
   const fs::path fsExtension{extension};
-  const fs::path fsFname{filename};
+  const fs::path fsOutFilename{filename};
   for(auto itEntry = fs::recursive_directory_iterator("./");
       itEntry != fs::recursive_directory_iterator();
       ++itEntry)
   {
     const auto &path = itEntry->path();
-    if(path.filename() == fsFname || fs::is_directory(path) || path.extension() != fsExtension)
+    if(path.filename() == fsOutFilename || fs::is_directory(path) || path.extension() != fsExtension)
     {
-      LOG << "Ommiting " << path.filename().string();
+      //LOG << "Ommiting " << path.filename().string();
       continue;
     }
 
     {
       std::lock_guard lock(fnamesMutex);
       fnamesArray.append(path.string());
-//    LOG << "Added to name pool [" << fnamesArray.last() << "]";
+      LOG << "Added to name pool [" << fnamesArray.last() << "]";
     }
     fnameAccess.notify_one();
   }
