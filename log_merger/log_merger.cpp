@@ -25,8 +25,11 @@
 
 #include "simplelog/simplelog.hpp"
 
+#include <cassert>
 #include <cstring>
 #include <filesystem>
+
+namespace fs = std::filesystem;
 
 struct AppArgs
 {
@@ -38,11 +41,64 @@ static void usage()
 {
   LOG << "log_merger -f <file name> -e <extension>";
   LOG << "  -f <file name> - file name to output merged logs";
-  LOG << "  -e <extension> - case sensitive txt, log, etc";
+  LOG << "  -e <extension> - case sensitive with dot ex. .txt, .log";
+}
+
+struct FnamesMemory
+{
+  char *data {nullptr};
+  size_t regionCount {0};
+
+  const size_t maxCount {0};
+  const size_t regionSize {0};
+
+  explicit operator bool() const { return data != nullptr; }
+
+  bool append(std::string_view str)
+  {
+    if(regionCount == maxCount)
+      return false;
+
+    char *ptr = data + regionSize * regionCount;
+    std::memset(ptr, 0x00, regionSize);
+    std::memcpy(ptr, str.data(), str.size());
+    ++regionCount;
+
+    return true;
+  }
+
+  std::string_view get(size_t idx) const
+  {
+    assert(idx < regionCount && "Buffer overflow");
+    return data + idx * regionSize;
+  }
+
+  std::string_view last() const
+  {
+    return data + (regionCount - 1) * regionSize;
+  }
+};
+
+static FnamesMemory initFnamesMem(size_t count, size_t regionSize)
+{
+  char *data = new(std::nothrow) char[count * regionSize];
+  if(!data)
+    return FnamesMemory{};
+
+  return FnamesMemory{
+    .data = data,
+    .regionCount = 0,
+    .maxCount = count,
+    .regionSize = regionSize
+  };
 }
 
 int main(int argc, char *argv[])
 {
+  static constexpr size_t FILE_COUNT_LIMIT = 1'048'576;
+  static constexpr size_t FNAME_MAX_SIZE = 450;
+//  static constexpr size_t FNAME_POOL_SIZE = FNAME_MAX_SIZE * FILE_COUNT_LIMIT;
+
   if(argc != 5)
   {
     LOG << "Missing input parameters!";
@@ -74,7 +130,33 @@ int main(int argc, char *argv[])
     usage();
     return 0;
   }
-  LOG << "filename " << filename << " extension " << extension;
+
+//  LOG << "file limit " << FILE_COUNT_LIMIT;
+//  LOG << "filename " << filename << " extension " << extension;
+
+  FnamesMemory fnamesArray = initFnamesMem(FILE_COUNT_LIMIT, FNAME_MAX_SIZE);
+  if(!fnamesArray)
+  {
+    LOG << "Cant initizalize memory to hold file names";
+    return 1;
+  }
+
+  const fs::path fsExtension{extension};
+  for(auto itEntry = fs::recursive_directory_iterator("./");
+      itEntry != fs::recursive_directory_iterator();
+      ++itEntry)
+  {
+    const auto &path = itEntry->path();
+    if(fs::is_directory(path) || path.extension() != fsExtension)
+    {
+      LOG << "Ommiting " << path.filename().string();
+      continue;
+    }
+
+    fnamesArray.append(path.string());
+    LOG << "Added to name pool [" << fnamesArray.last() << "]";
+  }
 
   return 0;
+   
 }
