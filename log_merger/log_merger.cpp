@@ -172,35 +172,6 @@ static std::optional<size_t> read(const std::string &fname, std::unique_ptr<uint
   return std::nullopt;
 }
 
-#if 0
-static bool copy(const std::string &fname, std::unique_ptr<uint8_t[]> &readBuffer, const size_t readBufferSize, FILE &outFile)
-{
-  //
-  if(const auto bytesRead = read(fname, readBuffer, readBufferSize))
-  {
-    //
-    LOG << " File read ok";
-    LOG << " Writing";
-    const size_t bytesWritten = fwrite(readBuffer.get(), 1, *bytesRead, &outFile);
-    if(bytesWritten != bytesRead)
-    {
-      LOG << "Error [" << ferror(&outFile) << "] while writing. ABORTING!";
-      return false;
-    }
-
-    LOG << " File write ok";
-    fwrite(NEWLINE, 1, NEWLINE_LEN, &outFile);
-  }
-  else
-  {
-    // We won't break whole process because of potentially single file error. Just log.
-    LOG << "Couldn't read " << fname;
-  }
-
-  return true;
-}
-#endif
-
 int main(int argc, char *argv[])
 {
   static constexpr size_t FILE_COUNT_LIMIT = 1'048'576;
@@ -300,14 +271,16 @@ int main(int argc, char *argv[])
       if(bytesWritten != bytesRead)
       {
         LOG << " Error [" << ferror(mergedLog) << "] while writing. ABORTING!";
+        std::abort();
         return;
       }
 
-      LOG << " File write ok";
+      LOG << " File write ok " << bytesWritten << " bytes";
       fwrite(NEWLINE, 1, NEWLINE_LEN, mergedLog);
       bytesRead.reset();
     }
-      
+
+    LOG << "Exiting write thread";  
   });
 
   std::jthread readThread([&]
@@ -332,7 +305,7 @@ int main(int argc, char *argv[])
 
       if(const auto bytesCount = read(fname, readBuffer, READ_BUFF_SIZE))
       {
-        LOG << " Read ok " << *bytesCount << " bytes";
+//        LOG << " Read ok " << *bytesCount << " bytes";
         std::lock_guard swapGuard(bufferSwapMutex);
         readBuffer.swap(writeBuffer);
         bytesRead = *bytesCount;
@@ -340,19 +313,10 @@ int main(int argc, char *argv[])
 
       signalWrite.notify_one();
       LOG << "Buffers swapped";
-
-#if 0
-      if(!copy(fname, readBuffer, READ_BUFF_SIZE, *mergedLog))
-      {
-        // we only fail on error when writing so I assume there is no point continuiong if
-        // there is something wrong with output file
-        return;
-      }
-#endif
    }
 
     // finishedPathTraversal == true
-    // we have fnameArray for ourselves so no more locking
+    // we have fnameArray for ourselves so no more locking fnameArray
     while(!fnamesArray.empty())
     {
       LOG << "No Locking copy";
@@ -369,16 +333,12 @@ int main(int argc, char *argv[])
 
       signalWrite.notify_one();
       LOG << "Buffers swapped";
-#if 0
-      if(!copy(fname, readBuffer, READ_BUFF_SIZE, *mergedLog))
-        return;
-#endif
     }
 
     finishedReading = true;
     signalWrite.notify_all();
 
-    LOG << "Exiting read/write thread";
+    LOG << "Exiting read thread";
   });
 
   const fs::path fsExtension{extension};
