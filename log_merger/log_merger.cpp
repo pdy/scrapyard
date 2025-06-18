@@ -26,6 +26,7 @@
 #include "simplelog/simplelog.hpp"
 
 #include <optional>
+#include <span>
 #include <thread>
 #include <atomic>
 #include <cassert>
@@ -65,9 +66,9 @@ static void usage()
 
 struct FileGuardDeleter
 {
-  void operator()(FILE *file) const
+  void operator()(std::FILE *file) const
   {
-    fclose(file);
+    std::fclose(file);
   }
 };
 
@@ -151,13 +152,13 @@ static size_t get_size(FILE *file)
 static std::optional<size_t> read(const std::string &fname, std::unique_ptr<uint8_t[]> &readBuffer, const size_t readBufferSize)
 {
   LOG << "Trying to read " << fname;
-  FILE *file{ fopen(fname.c_str(), "rb") };
+  std::FILE *file{ std::fopen(fname.c_str(), "rb") };
   if(file)
   {
     LOG << " File open ok";
     FileGuard fguard{file};
-    const auto bytesRead = fread(readBuffer.get(), 1, readBufferSize, file);
-    if(const int error = ferror(file); error != 0)
+    const auto bytesRead = std::fread(readBuffer.get(), 1, readBufferSize, file);
+    if(const int error = std::ferror(file); error != 0)
     {
       LOG << " Error [" << error << "] while reading " << fname;
     }
@@ -234,7 +235,7 @@ int main(int argc, char *argv[])
     return 1;
   }
 
-  FILE *mergedLog = fopen(std::string{filename}.c_str(), "wb");
+  std::FILE *mergedLog = std::fopen(std::string{filename}.c_str(), "wb");
   if(!mergedLog)
   {
     LOG << "Couldn't open merged.log for writing";
@@ -246,7 +247,8 @@ int main(int argc, char *argv[])
   auto writeBuffer = allocBuffer(READ_BUFF_SIZE);
   if(!writeBuffer)
   {
-    LOG << "Can't initilize memory for writing. Read buffer will be reused";
+    LOG << "Can't initilize memory for writing.";
+    return 1;
   }
 
   std::mutex fnamesMutex, bufferSwapMutex;
@@ -258,6 +260,7 @@ int main(int argc, char *argv[])
 
   std::jthread writeThread([&]
   {
+    const auto start = NOW();
     LOG << "Entering write thread";
     while(!finishedReading)
     {
@@ -267,24 +270,26 @@ int main(int argc, char *argv[])
       if(!bytesRead)
         break;
 
-      const size_t bytesWritten = fwrite(writeBuffer.get(), 1, *bytesRead, mergedLog);
+      const size_t bytesWritten = std::fwrite(writeBuffer.get(), 1, *bytesRead, mergedLog);
       if(bytesWritten != bytesRead)
       {
-        LOG << " Error [" << ferror(mergedLog) << "] while writing. ABORTING!";
+        LOG << " Error [" << std::ferror(mergedLog) << "] while writing. ABORTING!";
         std::abort();
         return;
       }
 
       LOG << " File write ok " << bytesWritten << " bytes";
       fwrite(NEWLINE, 1, NEWLINE_LEN, mergedLog);
+//      fflush(mergedLog);
       bytesRead.reset();
     }
 
-    LOG << "Exiting write thread";  
+    LOG << "Exiting write thread " << DURATION_MS(start).count() << "ms";
   });
 
   std::jthread readThread([&]
   {
+    const auto start = NOW();
     LOG << "Entering read thread";
     while(!finishedPathTraversal)
     {
@@ -338,7 +343,7 @@ int main(int argc, char *argv[])
     finishedReading = true;
     signalWrite.notify_all();
 
-    LOG << "Exiting read thread";
+    LOG << "Exiting read thread " << DURATION_MS(start).count() << "ms";
   });
 
   const fs::path fsExtension{extension};
@@ -369,6 +374,17 @@ int main(int argc, char *argv[])
   {
     const auto val = fnamesArray.get(i);
     LOG << "Added to name pool [" << val << "] len [" << val.size() << ']';
+  }
+#endif
+
+#if 0
+  if(readThread.joinable() && writeThread.joinable())
+  {
+    readThread.join();
+    writeThread.join();
+
+    readBuffer.release();
+    writeBuffer.release();
   }
 #endif
 
