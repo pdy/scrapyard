@@ -17,6 +17,7 @@ STRIP := strip
 ifneq (, $(findstring debug,$(MAKECMDGOALS)))
 	BUILD = ./bin/debug
 	CXXFLAGS = $(FLAGS) $(INCLUDES) -g3 -fsanitize=address -Wall#-Weverything
+#	CXXFLAGS = $(FLAGS) $(INCLUDES) -g3 -Wall#-Weverything
 	STRIP = echo
 endif
 
