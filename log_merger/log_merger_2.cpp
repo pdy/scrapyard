@@ -372,6 +372,11 @@ public:
     m_pathAvailable.notify_one();
   }
 
+  void notify()
+  {
+    m_pathAvailable.notify_all();
+  }
+
 #if 0
   void wait()
   {
@@ -673,6 +678,7 @@ int main(int argc, char *argv[])
   finishedPathTraversal = true; 
   LOG << "Finished path traversal";
 
+  hasher.notify();
   hasher.joinThreads();
   finishedHashing = true;
   fnamesSignal.notify_all();
