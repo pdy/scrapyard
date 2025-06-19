@@ -58,6 +58,11 @@ struct AppArgs
 
 static void usage()
 {
+  LOG << "";
+  LOG << "!!!!! THIS IS UNFINISHED SLOW PROTOTYPE !!!!!";
+  LOG << "!!!!!         Use log_merger_2           !!!!!";
+  LOG << "";
+
   LOG << "log_merger -f <file name> -e <extension>";
   LOG << "  -f <file name> - file name to output merged logs";
   LOG << "  -e <extension> - case sensitive with dot ex. .txt, .log";

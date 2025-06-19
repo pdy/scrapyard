@@ -24,10 +24,12 @@
 */
 
 #include "simplelog/simplelog.hpp"
+#include "xxhash.hpp"
 
+#include <cstdint>
 #include <functional>
+#include <new>
 #include <queue>
-#include <optional>
 #include <thread>
 #include <atomic>
 #include <cassert>
@@ -36,6 +38,11 @@
 #include <filesystem>
 #include <memory>
 #include <mutex>
+
+#include <openssl/bio.h>
+#include <openssl/evp.h>
+#include <unordered_set>
+#include <vector>
 
 #define KB (static_cast<size_t>(1024))
 #define MB (static_cast<size_t>(1024) * KB)
@@ -61,7 +68,7 @@ struct AppArgs
 
 static void usage()
 {
-  LOG << "log_merger -f <file name> -e <extension>";
+  LOG << "log_merger_2 -f <file name> -e <extension>";
   LOG << "  -f <file name> - file name to output merged logs";
   LOG << "  -e <extension> - case sensitive with dot ex. .txt, .log";
 }
@@ -75,6 +82,16 @@ struct FileGuardDeleter
 };
 
 using FileGuard = std::unique_ptr<std::FILE, FileGuardDeleter>;
+
+struct BioGuardDeleter
+{
+  void operator()(BIO *bio) const
+  {
+    BIO_free_all(bio);
+  }
+};
+
+using BIO_uptr = std::unique_ptr<BIO, BioGuardDeleter>;
 
 struct FnamesMemory
 {
@@ -145,12 +162,12 @@ static FnamesMemory initFnamesMem(size_t count, size_t regionSize)
   };
 }
 
+#if 0
 static std::unique_ptr<uint8_t[]> allocBuffer(size_t size)
 {
   return std::unique_ptr<uint8_t[]> {new(std::nothrow) uint8_t[size] };
 }
 
-#if 0
 static size_t get_size(FILE *file)
 {
   fseek(file, 0, SEEK_END);
@@ -159,7 +176,6 @@ static size_t get_size(FILE *file)
 
   return ret;
 }
-#endif
 
 static std::optional<size_t> read(const std::string &fname, std::unique_ptr<uint8_t[]> &readBuffer, const size_t readBufferSize)
 {
@@ -184,19 +200,111 @@ static std::optional<size_t> read(const std::string &fname, std::unique_ptr<uint
 
   return std::nullopt;
 }
+#endif
+
+static std::vector<uint8_t> hashFile(const std::string &path, const EVP_MD *evpMd)
+{
+  BIO_uptr bioRaw{ BIO_new_file(path.c_str(), "rb") };
+  if(!bioRaw)
+    return {};
+
+  // mdtmp will be freed with bio
+  BIO *mdtmp = BIO_new(BIO_f_md());
+  if(!mdtmp)
+    return {};
+
+  // WTF OpenSSL?
+  // Every EVP_<digest>() function returns const pointer, but
+  // BIO_set_md which supposed to consume this pointer takes.... non const!
+  // WTF OpenSSL?
+  BIO_set_md(mdtmp, const_cast<EVP_MD*>(evpMd));
+  BIO_uptr bio{ BIO_push(mdtmp, bioRaw.release()) };
+  if(!bio)
+    return {};
+
+  {
+    char buf[10240];
+    int rdlen;
+    do {
+      char *bufFirstPos = buf;
+      rdlen = BIO_read(bio.get(), bufFirstPos, sizeof(buf));
+    } while (rdlen > 0);
+  }
+
+  uint8_t mdbuf[EVP_MAX_MD_SIZE];
+  const int mdlen = BIO_gets(mdtmp, reinterpret_cast<char*>(mdbuf), EVP_MAX_MD_SIZE);
+
+  return std::vector<uint8_t>(std::begin(mdbuf), std::next(std::begin(mdbuf), mdlen));
+}
+
+struct FileHash
+{
+  std::vector<uint8_t> hash;
+
+  FileHash(std::vector<uint8_t> &&other) noexcept
+    : hash{std::move(other)}
+  {}
+
+  FileHash() = default;
+
+  FileHash(const FileHash &other) noexcept
+    : hash{other.hash}
+  {}
+
+  FileHash(FileHash &&other) noexcept
+    : hash{std::move(other.hash)}
+  {}
+
+  bool operator==(const FileHash &other) const { return hash == other.hash; }
+  bool operator!=(const FileHash &other) const { return !(*this == other); }
+
+  FileHash& operator=(std::vector<uint8_t> bt)
+  {
+    hash = std::move(bt);
+    return *this;
+  }
+
+  FileHash& operator=(FileHash other) noexcept
+  {
+    swap(*this, other);
+    return *this;
+  }
+
+  friend void swap(FileHash &lhs, FileHash &rhs) noexcept
+  {
+    using std::swap;
+    swap(lhs.hash, rhs.hash);
+  }
+};
+
+struct HashFileHash
+{
+  std::uint64_t operator()(const FileHash &filehash) const
+  {
+    return xxh::xxhash<64>(filehash.hash);
+  }
+};
+
+using FileHashCache = std::unordered_set<FileHash, HashFileHash>;
 
 class FileHashThreadPool final
 {
+  // state for output file names
   FnamesMemory &m_outBuff;
   std::mutex &m_outBuffMutex;
+  std::condition_variable &m_signalFileAdded;
   std::atomic_bool &m_pathTraversalFinished;
 
+  // state for hash caching
+  FileHashCache m_hashCache;
+  std::mutex m_hashCacheMutex;
+
+  // state for threading
   thread_count_t m_threadCount{0};
   std::queue <std::string> m_filePaths = {};
   std::mutex m_filePathsMutex = {};
   std::condition_variable m_pathAvailable = {};
   std::atomic_bool m_running{false};
-
   std::unique_ptr<std::jthread[]> m_threads = nullptr;
 
 public:
@@ -204,13 +312,25 @@ public:
   FileHashThreadPool(const FileHashThreadPool&) = delete;
   FileHashThreadPool(FileHashThreadPool&&) = delete;
 
-  FileHashThreadPool(FnamesMemory &outbuff, std::mutex &outbuffMutex, std::atomic_bool &pathTraversalFinished)
-    : m_outBuff{outbuff}, m_outBuffMutex{outbuffMutex}, m_pathTraversalFinished{pathTraversalFinished}
+  FileHashThreadPool(FnamesMemory &outbuff, std::mutex &outbuffMutex, std::condition_variable &signalFileAdded, std::atomic_bool &pathTraversalFinished)
+    : m_outBuff{outbuff}, m_outBuffMutex{outbuffMutex}, m_signalFileAdded{signalFileAdded}, m_pathTraversalFinished{pathTraversalFinished}
   {}
 
   ~FileHashThreadPool()
   {
     stop();
+  }
+
+  bool reserve(size_t count)
+  {
+    try{
+      m_hashCache.reserve(count);
+    }catch(const std::bad_alloc&)
+    {
+      return false;
+    }
+
+    return true;
   }
 
   void start(thread_count_t threadCount = 3)
@@ -222,8 +342,26 @@ public:
   void stop()
   {
     if(m_running)
+    {
+      m_running = false;
+      m_pathAvailable.notify_all();
       joinThreads();
+    }
   }
+
+  void joinThreads()
+  {
+    for (thread_count_t i = 0; i < m_threadCount; ++i)
+    {
+      if (m_threads[i].joinable())
+      {
+        m_threads[i].join();
+      }
+    }
+
+    m_threadCount = 0;
+  }
+
 
   void schedule(std::string filepath)
   {
@@ -234,27 +372,33 @@ public:
     m_pathAvailable.notify_one();
   }
 
+#if 0
   void wait()
   {
+    // here we should use another conditional_variable
+    // but I got lazy so we have blocking with sleep
+
     while(!m_pathTraversalFinished)
       std::this_thread::sleep_for(10ms);
-
 
     thread_count_t finishedThreads = 0;
     while(finishedThreads != m_threadCount)
     {
+      finishedThreads = 0;
       for(thread_count_t i = 0; i < m_threadCount; ++i)
       {
-        if(m_threads[i].joinable())
+        if(!m_threads[i].joinable())
           ++finishedThreads;
       }
       std::this_thread::sleep_for(10ms);
     }
   }
+#endif
 
 private:
   void fileHashWorker()
   {
+    const auto start = NOW();
     while(m_running)
     {
       std::unique_lock lock(m_filePathsMutex);
@@ -269,10 +413,37 @@ private:
         m_filePaths.pop();
         lock.unlock();
 
-        // hash
-        LOG << "Hashing " << file;
+        auto fileHash = hashFile(file, EVP_blake2b512());
+        LOG << "  " << file << " hash " << bin2Hex(fileHash);
+
+        bool inserted = false;
+        {
+          std::lock_guard lock(m_hashCacheMutex);
+          const auto [iter, ins] = m_hashCache.insert(std::move(fileHash));
+          inserted = ins;
+        }
+
+        if(inserted)
+        {
+          {
+            std::lock_guard lock(m_outBuffMutex);
+            m_outBuff.append(file);
+          }
+          LOG << "  Added unique " << file;
+          m_signalFileAdded.notify_one();
+        }
       }
     }
+    LOG << "Hash worker finished " << DURATION_MS(start).count() << "ms"; //std::this_thread::get_id()
+  }
+
+  std::string bin2Hex(const std::vector<uint8_t> &buff)
+  {
+    std::ostringstream oss;
+    for(const auto bt : buff){
+      oss << std::setfill('0') << std::setw(2) << std::hex << +bt;
+    }
+    return oss.str();
   }
 
   void createThreads(thread_count_t threadCount)
@@ -286,11 +457,56 @@ private:
     }
   }
 
+};
+
+class FileWriteThreadPool
+{
+  // state for writing
+  std::mutex m_fileMutex;
+  std::FILE &m_outputFile;
+
+  // state for input buffer
+  FnamesMemory &m_fnamesArray;
+  std::mutex &m_fnamesMutex;
+  std::condition_variable &m_fnamesSignal;
+  std::atomic_bool &m_finishedHashing;
+
+  // state for threading
+  thread_count_t m_threadCount{0};
+  std::queue <std::string> m_filePaths = {};
+  std::mutex m_filePathsMutex = {};
+  std::condition_variable m_pathAvailable = {};
+  std::atomic_bool m_running{false};
+  std::unique_ptr<std::jthread[]> m_threads = nullptr;
+
+
+public:
+  FileWriteThreadPool(std::FILE &outputFile, FnamesMemory &fnamesArray, std::mutex &fnamesMutex, std::condition_variable &fnamesSignal, std::atomic_bool &finishedHashing)
+    : m_outputFile{outputFile},
+      m_fnamesArray{fnamesArray},
+      m_fnamesMutex{fnamesMutex},
+      m_fnamesSignal{fnamesSignal},
+      m_finishedHashing{finishedHashing}
+  {}
+
+  void start(thread_count_t threadCount = 2)
+  {
+    stop();
+    createThreads(threadCount);
+  }
+
+  void stop()
+  {
+    if(m_running)
+    {
+      m_running = false;
+      m_pathAvailable.notify_all();
+      joinThreads();
+    }
+  }
+
   void joinThreads()
   {
-    m_running = false;
-    m_pathAvailable.notify_all();
-
     for (thread_count_t i = 0; i < m_threadCount; ++i)
     {
       if (m_threads[i].joinable())
@@ -302,13 +518,80 @@ private:
     m_threadCount = 0;
   }
 
+#if 0
+  void wait()
+  {
+    // here we should use another conditional_variable
+    // but I got lazy so we have blocking with sleep
+
+    while(!m_finishedHashing)
+      std::this_thread::sleep_for(10ms);
+
+    thread_count_t finishedThreads = 0;
+    while(finishedThreads != m_threadCount)
+    {
+      finishedThreads = 0;
+      for(thread_count_t i = 0; i < m_threadCount; ++i)
+      {
+        if(!m_threads[i].joinable())
+          ++finishedThreads;
+      }
+      std::this_thread::sleep_for(10ms);
+    }
+  }
+#endif
+
+private:
+
+  void worker()
+  {
+    const auto start = NOW();
+
+    while(m_running)
+    {
+      std::unique_lock lock(m_fnamesMutex);
+      m_fnamesSignal.wait(lock, [&] { return !m_fnamesArray.empty() || !m_running || m_finishedHashing; });
+
+      if(!m_running || (m_fnamesArray.empty() && m_finishedHashing))
+        break;
+
+      const std::string fileName{ m_fnamesArray.last() };
+      m_fnamesArray.pop_last();
+
+      lock.unlock();
+
+      std::FILE *inFile = std::fopen(fileName.c_str(), "rb");
+      if(inFile)
+      {
+        FileGuard guard{inFile};
+        uint8_t buffer[BUFSIZ];
+
+        while(const size_t bytesRead = std::fread(buffer, 1, BUFSIZ, inFile))
+          std::fwrite(buffer, 1, bytesRead, &m_outputFile);
+      }
+    }
+
+    LOG << "Write worker finised " << DURATION_MS(start).count() << "ms";
+  }
+
+  void createThreads(thread_count_t threadCount)
+  {
+    m_threads = std::make_unique<std::jthread[]>(threadCount);
+    m_threadCount = threadCount;
+    m_running = true;
+    for (thread_count_t i = 0; i < threadCount; ++i)
+    {
+      m_threads[i] = std::jthread([this, w = &FileWriteThreadPool::worker]{ std::invoke(w, this); });
+    }
+  }
+
 };
 
 int main(int argc, char *argv[])
 {
   static constexpr size_t FILE_COUNT_LIMIT = 1'048'576;
   static constexpr size_t FNAME_MAX_SIZE = 451; // arbitrary value
-  static constexpr size_t READ_BUFF_SIZE = 2 * GB + 10; // +10 just in case
+//  static constexpr size_t READ_BUFF_SIZE = 2 * GB + 10; // +10 just in case
 //  static constexpr size_t FNAME_POOL_SIZE = FNAME_MAX_SIZE * FILE_COUNT_LIMIT;
 
   if(argc != 5)
@@ -355,13 +638,14 @@ int main(int argc, char *argv[])
     LOG << "Cant initizalize memory to hold file names";
     return 1;
   }
-
+#if 0
   auto readWriteBuffer = allocBuffer(READ_BUFF_SIZE * 2);
   if(!readWriteBuffer)
   {
     LOG << "Cant initialize memory for reading";
     return 1;
   }
+#endif
 
   std::FILE *outputFile = std::fopen(std::string{filename}.c_str(), "wb");
   if(!outputFile)
@@ -376,10 +660,21 @@ int main(int argc, char *argv[])
 
 
   std::mutex fnamesMutex;
+  std::condition_variable fnamesSignal;
   std::atomic_bool finishedPathTraversal{false};
+  std::atomic_bool finishedHashing{false};
 
-  FileHashThreadPool hasher(fnamesArray, fnamesMutex, finishedPathTraversal);
-  hasher.start();
+  FileHashThreadPool hasher(fnamesArray, fnamesMutex, fnamesSignal, finishedPathTraversal);
+  if(!hasher.reserve(FILE_COUNT_LIMIT))
+  {
+    LOG << "Couldn't initialize enough memory for hash cache";
+    return 1;
+  }
+  hasher.start(3);
+
+  FileWriteThreadPool writer(*outputFile, fnamesArray, fnamesMutex, fnamesSignal, finishedHashing);
+  writer.start(2);
+  LOG << "Writer threads started";
 
   const fs::path fsExtension{extension};
   const fs::path fsOutFilename{filename};
@@ -395,15 +690,18 @@ int main(int argc, char *argv[])
     }
 
     hasher.schedule(path.string());
-    {
-//      fnamesArray.append(path.string());
-//      LOG << "Added to name pool [" << fnamesArray.last() << "]";
-    }
   }
+
   finishedPathTraversal = true; 
   LOG << "Finished path traversal";
 
-  hasher.wait();
+  hasher.joinThreads();
+  finishedHashing = true;
+  fnamesSignal.notify_all();
+  LOG << "Finished hashing";
+
+  writer.joinThreads();
+  LOG << "Finished writing";
 
 #if 0
   for(size_t i = 0; i < fnamesArray.count; ++i)
