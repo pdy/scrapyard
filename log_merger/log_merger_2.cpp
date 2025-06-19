@@ -162,46 +162,6 @@ static FnamesMemory initFnamesMem(size_t count, size_t regionSize)
   };
 }
 
-#if 0
-static std::unique_ptr<uint8_t[]> allocBuffer(size_t size)
-{
-  return std::unique_ptr<uint8_t[]> {new(std::nothrow) uint8_t[size] };
-}
-
-static size_t get_size(FILE *file)
-{
-  fseek(file, 0, SEEK_END);
-  const long ret = ftell(file);
-  fseek(file, 0, SEEK_SET); 
-
-  return ret;
-}
-
-static std::optional<size_t> read(const std::string &fname, std::unique_ptr<uint8_t[]> &readBuffer, const size_t readBufferSize)
-{
-  LOG << "Reading " << fname;
-  std::FILE *file{ std::fopen(fname.c_str(), "rb") };
-  if(file)
-  {
-    LOG << "  File open ok";
-    FileGuard fguard{file};
-    const auto bytesRead = std::fread(readBuffer.get(), 1, readBufferSize, file);
-    if(const int error = std::ferror(file); error != 0)
-    {
-      LOG << "  Error [" << error << "] while reading " << fname;
-    }
-    else if(bytesRead == 0)
-    {
-      LOG << "  Empty file " << fname;
-    }
-
-    return bytesRead;
-  }
-
-  return std::nullopt;
-}
-#endif
-
 static std::vector<uint8_t> hashFile(const std::string &path, const EVP_MD *evpMd)
 {
   BIO_uptr bioRaw{ BIO_new_file(path.c_str(), "rb") };
@@ -377,29 +337,6 @@ public:
     m_pathAvailable.notify_all();
   }
 
-#if 0
-  void wait()
-  {
-    // here we should use another conditional_variable
-    // but I got lazy so we have blocking with sleep
-
-    while(!m_pathTraversalFinished)
-      std::this_thread::sleep_for(10ms);
-
-    thread_count_t finishedThreads = 0;
-    while(finishedThreads != m_threadCount)
-    {
-      finishedThreads = 0;
-      for(thread_count_t i = 0; i < m_threadCount; ++i)
-      {
-        if(!m_threads[i].joinable())
-          ++finishedThreads;
-      }
-      std::this_thread::sleep_for(10ms);
-    }
-  }
-#endif
-
 private:
   void fileHashWorker()
   {
@@ -419,7 +356,7 @@ private:
         lock.unlock();
 
         auto fileHash = hashFile(file, EVP_blake2b512());
-        LOG << "  " << file << ' ' << bin2Hex(fileHash);
+//        LOG << "  " << file << ' ' << bin2Hex(fileHash);
 
         bool inserted = false;
         {
@@ -686,25 +623,6 @@ int main(int argc, char *argv[])
 
   writer.joinThreads();
   LOG << "Finished writing";
-
-#if 0
-  for(size_t i = 0; i < fnamesArray.count; ++i)
-  {
-    const auto val = fnamesArray.get(i);
-    LOG << "Added to name pool [" << val << "] len [" << val.size() << ']';
-  }
-#endif
-
-#if 0
-  if(readThread.joinable() && writeThread.joinable())
-  {
-    readThread.join();
-    writeThread.join();
-
-    readBuffer.release();
-    writeBuffer.release();
-  }
-#endif
 
   return 0;
 }

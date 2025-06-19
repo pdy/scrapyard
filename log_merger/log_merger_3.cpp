@@ -390,7 +390,7 @@ private:
         lock.unlock();
 
         auto fileHash = hashFile(file, EVP_blake2b512());
-        LOG << "  " << file << ' ' << bin2Hex(fileHash);
+//        LOG << "  " << file << ' ' << bin2Hex(fileHash);
 
         bool inserted = false;
         {
