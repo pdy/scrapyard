@@ -518,29 +518,6 @@ public:
     m_threadCount = 0;
   }
 
-#if 0
-  void wait()
-  {
-    // here we should use another conditional_variable
-    // but I got lazy so we have blocking with sleep
-
-    while(!m_finishedHashing)
-      std::this_thread::sleep_for(10ms);
-
-    thread_count_t finishedThreads = 0;
-    while(finishedThreads != m_threadCount)
-    {
-      finishedThreads = 0;
-      for(thread_count_t i = 0; i < m_threadCount; ++i)
-      {
-        if(!m_threads[i].joinable())
-          ++finishedThreads;
-      }
-      std::this_thread::sleep_for(10ms);
-    }
-  }
-#endif
-
 private:
 
   void worker()
@@ -566,6 +543,7 @@ private:
         FileGuard guard{inFile};
         uint8_t buffer[BUFSIZ];
 
+        std::lock_guard lock(m_fileMutex);
         while(const size_t bytesRead = std::fread(buffer, 1, BUFSIZ, inFile))
           std::fwrite(buffer, 1, bytesRead, &m_outputFile);
       }
