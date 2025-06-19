@@ -419,7 +419,7 @@ private:
         lock.unlock();
 
         auto fileHash = hashFile(file, EVP_blake2b512());
-        LOG << "  " << file << " hash " << bin2Hex(fileHash);
+        LOG << "  " << file << ' ' << bin2Hex(fileHash);
 
         bool inserted = false;
         {
@@ -653,7 +653,7 @@ int main(int argc, char *argv[])
     LOG << "Couldn't initialize enough memory for hash cache";
     return 1;
   }
-  hasher.start(3);
+  hasher.start(5);
 
   FileWriteThreadPool writer(*outputFile, fnamesArray, fnamesMutex, fnamesSignal, finishedHashing);
   writer.start(2);
