@@ -25,6 +25,8 @@
 
 #include "simplelog/simplelog.hpp"
 
+#include <functional>
+#include <queue>
 #include <optional>
 #include <thread>
 #include <atomic>
@@ -47,8 +49,9 @@
 //    static constexpr size_t NEWLINE_LEN = 1;
 #endif
 
-
+using thread_count_t = std::invoke_result_t<decltype(std::thread::hardware_concurrency)>;
 namespace fs = std::filesystem;
+using namespace std::chrono_literals;
 
 struct AppArgs
 {
@@ -182,6 +185,125 @@ static std::optional<size_t> read(const std::string &fname, std::unique_ptr<uint
   return std::nullopt;
 }
 
+class FileHashThreadPool final
+{
+  FnamesMemory &m_outBuff;
+  std::mutex &m_outBuffMutex;
+  std::atomic_bool &m_pathTraversalFinished;
+
+  thread_count_t m_threadCount{0};
+  std::queue <std::string> m_filePaths = {};
+  std::mutex m_filePathsMutex = {};
+  std::condition_variable m_pathAvailable = {};
+  std::atomic_bool m_running{false};
+
+  std::unique_ptr<std::jthread[]> m_threads = nullptr;
+
+public:
+  FileHashThreadPool() = delete;
+  FileHashThreadPool(const FileHashThreadPool&) = delete;
+  FileHashThreadPool(FileHashThreadPool&&) = delete;
+
+  FileHashThreadPool(FnamesMemory &outbuff, std::mutex &outbuffMutex, std::atomic_bool &pathTraversalFinished)
+    : m_outBuff{outbuff}, m_outBuffMutex{outbuffMutex}, m_pathTraversalFinished{pathTraversalFinished}
+  {}
+
+  ~FileHashThreadPool()
+  {
+    stop();
+  }
+
+  void start(thread_count_t threadCount = 3)
+  {
+    stop();
+    createThreads(threadCount);
+  }
+
+  void stop()
+  {
+    if(m_running)
+      joinThreads();
+  }
+
+  void schedule(std::string filepath)
+  {
+    {
+      std::lock_guard lock(m_filePathsMutex);
+      m_filePaths.push(std::move(filepath));
+    }
+    m_pathAvailable.notify_one();
+  }
+
+  void wait()
+  {
+    while(!m_pathTraversalFinished)
+      std::this_thread::sleep_for(10ms);
+
+
+    thread_count_t finishedThreads = 0;
+    while(finishedThreads != m_threadCount)
+    {
+      for(thread_count_t i = 0; i < m_threadCount; ++i)
+      {
+        if(m_threads[i].joinable())
+          ++finishedThreads;
+      }
+      std::this_thread::sleep_for(10ms);
+    }
+  }
+
+private:
+  void fileHashWorker()
+  {
+    while(m_running)
+    {
+      std::unique_lock lock(m_filePathsMutex);
+      m_pathAvailable.wait(lock, [this] { return !m_filePaths.empty() || !m_running || m_pathTraversalFinished; });
+      
+      if(m_pathTraversalFinished && m_filePaths.empty())
+        break;
+
+      if(m_running)
+      {
+        const auto file = std::move(m_filePaths.front());
+        m_filePaths.pop();
+        lock.unlock();
+
+        // hash
+        LOG << "Hashing " << file;
+      }
+    }
+  }
+
+  void createThreads(thread_count_t threadCount)
+  {
+    m_threads = std::make_unique<std::jthread[]>(threadCount);
+    m_threadCount = threadCount;
+    m_running = true;
+    for (thread_count_t i = 0; i < threadCount; ++i)
+    {
+      m_threads[i] = std::jthread([this, w = &FileHashThreadPool::fileHashWorker]{ std::invoke(w, this); });
+    }
+  }
+
+  void joinThreads()
+  {
+    m_running = false;
+    m_pathAvailable.notify_all();
+
+    for (thread_count_t i = 0; i < m_threadCount; ++i)
+    {
+      if (m_threads[i].joinable())
+      {
+        m_threads[i].join();
+      }
+    }
+
+    m_threadCount = 0;
+  }
+
+};
+
 int main(int argc, char *argv[])
 {
   static constexpr size_t FILE_COUNT_LIMIT = 1'048'576;
@@ -234,8 +356,8 @@ int main(int argc, char *argv[])
     return 1;
   }
 
-  auto readBuffer = allocBuffer(READ_BUFF_SIZE);
-  if(!readBuffer)
+  auto readWriteBuffer = allocBuffer(READ_BUFF_SIZE * 2);
+  if(!readWriteBuffer)
   {
     LOG << "Cant initialize memory for reading";
     return 1;
@@ -252,105 +374,12 @@ int main(int argc, char *argv[])
 //  char wbuf[32 * KB];
 //  std::setvbuf(mergedLog, wbuf, _IOFBF, 32 * KB);
 
-  auto writeBuffer = allocBuffer(READ_BUFF_SIZE);
-  if(!writeBuffer)
-  {
-    LOG << "Can't initilize memory for writing.";
-    return 1;
-  }
 
-  std::mutex fnamesMutex, bufferSwapMutex;
+  std::mutex fnamesMutex;
   std::atomic_bool finishedPathTraversal{false};
-  std::atomic_bool finishedReading{false};
-  std::condition_variable fnameAccess;
-  std::condition_variable signalWrite;
-  std::optional<size_t> bytesRead{std::nullopt};
 
-  std::jthread writeThread([&]
-  {
-    const auto start = NOW();
-    LOG << "Entering write thread";
-    while(!finishedReading)
-    {
-      std::unique_lock swapLock(bufferSwapMutex);
-      signalWrite.wait(swapLock, [&] { return bytesRead || finishedReading; });
-
-      if(!bytesRead)
-        break;
-
-      const size_t bytesWritten = std::fwrite(writeBuffer.get(), 1, *bytesRead, outputFile);
-      if(bytesWritten != bytesRead)
-      {
-        LOG << " Error [" << std::ferror(outputFile) << "] while writing. ABORTING!";
-        std::abort();
-        return;
-      }
-
-      LOG << " File write ok " << bytesWritten << " bytes";
-//      fwrite(NEWLINE, 1, NEWLINE_LEN, mergedLog);
-
-      bytesRead.reset();
-    }
-
-    LOG << "Finished write thread " << DURATION_S(start).count() << "s";
-  });
-
-  std::jthread readThread([&]
-  {
-    const auto start = NOW();
-    LOG << "Entering read thread";
-    while(!finishedPathTraversal)
-    {
-      std::unique_lock lock(fnamesMutex);
-      fnameAccess.wait(lock, [&] { return !fnamesArray.empty() || finishedPathTraversal; });
-
-      if(finishedPathTraversal)
-        break;
-
-      const std::string fname{fnamesArray.last()};
-      fnamesArray.pop_last();
-
-      lock.unlock();
-      fnameAccess.notify_one();
-
-      if(fname.empty())
-        continue;
-
-      if(const auto bytesCount = read(fname, readBuffer, READ_BUFF_SIZE))
-      {
-        std::lock_guard swapGuard(bufferSwapMutex);
-        readBuffer.swap(writeBuffer);
-        bytesRead = *bytesCount;
-      }
-      signalWrite.notify_one();
-   //   LOG << "Buffers swapped";
-   }
-
-    // finishedPathTraversal == true
-    // we have fnameArray for ourselves so no more locking fnameArray
-    while(!fnamesArray.empty())
-    {
-  //    LOG << "No Locking copy";
-
-      const std::string fname {fnamesArray.last()};
-      fnamesArray.pop_last();
-
-      if(const auto bytesCount = read(fname, readBuffer, READ_BUFF_SIZE))
-      {
-        std::lock_guard swapGuard(bufferSwapMutex);
-        readBuffer.swap(writeBuffer);
-        bytesRead = *bytesCount;
-      }
-
-      signalWrite.notify_one();
- //     LOG << "Buffers swapped";
-    }
-
-    finishedReading = true;
-    signalWrite.notify_all();
-
-    LOG << "Finished read thread " << DURATION_S(start).count() << "s";
-  });
+  FileHashThreadPool hasher(fnamesArray, fnamesMutex, finishedPathTraversal);
+  hasher.start();
 
   const fs::path fsExtension{extension};
   const fs::path fsOutFilename{filename};
@@ -365,17 +394,16 @@ int main(int argc, char *argv[])
       continue;
     }
 
+    hasher.schedule(path.string());
     {
-      std::lock_guard lock(fnamesMutex);
-      fnamesArray.append(path.string());
+//      fnamesArray.append(path.string());
 //      LOG << "Added to name pool [" << fnamesArray.last() << "]";
     }
-    fnameAccess.notify_one();
   }
-  finishedPathTraversal = true;
-  fnameAccess.notify_all();
-  
+  finishedPathTraversal = true; 
   LOG << "Finished path traversal";
+
+  hasher.wait();
 
 #if 0
   for(size_t i = 0; i < fnamesArray.count; ++i)
