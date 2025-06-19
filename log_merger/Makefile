@@ -16,8 +16,8 @@ CXXFLAGS = $(FLAGS) $(INCLUDES) -O3 -Wall
 STRIP := strip
 ifneq (, $(findstring debug,$(MAKECMDGOALS)))
 	BUILD = ./bin/debug
-	CXXFLAGS = $(FLAGS) $(INCLUDES) -g3 -fsanitize=address -Wall#-Weverything
-#	CXXFLAGS = $(FLAGS) $(INCLUDES) -g3 -Wall#-Weverything
+#	CXXFLAGS = $(FLAGS) $(INCLUDES) -g3 -fsanitize=address -Wall#-Weverything
+	CXXFLAGS = $(FLAGS) $(INCLUDES) -g3 -Wall#-Weverything
 	STRIP = echo
 endif
 
@@ -34,8 +34,9 @@ post-build: main-build
 	$(STRIP) $(BUILD)/*
 
 main-build: pre-build
-	@$(MAKE) --no-print-directory $(BUILD)/log_merger
+#	@$(MAKE) --no-print-directory $(BUILD)/log_merger
 	@$(MAKE) --no-print-directory $(BUILD)/log_merger_2
+	@$(MAKE) --no-print-directory $(BUILD)/log_merger_3
 	
 clean:
 	@rm -r ./bin
