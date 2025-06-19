@@ -7,9 +7,9 @@ FLAGS := -std=c++20 -Wno-deprecated-register -Wno-c++98-compat -Wno-c++98-compat
 
 LD_FLAGS := #-L
 
-LD_LIBS := -pthread
+LD_LIBS := -lssl -lcrypto -pthread
 
-INCLUDES := -isystemcmdline 
+INCLUDES := -isystemcmdline -isystem/usr/include/openssl
 
 BUILD = ./bin/release
 CXXFLAGS = $(FLAGS) $(INCLUDES) -O3 -Wall
@@ -35,6 +35,7 @@ post-build: main-build
 
 main-build: pre-build
 	@$(MAKE) --no-print-directory $(BUILD)/log_merger
+	@$(MAKE) --no-print-directory $(BUILD)/log_merger_2
 	
 clean:
 	@rm -r ./bin
