@@ -376,7 +376,7 @@ private:
         }
       }
     }
-    LOG << "Hash worker finished " << DURATION_MS(start).count() << "ms"; //std::this_thread::get_id()
+    LOG << "Hash worker finished " << DURATION_S(start).count() << "s"; //std::this_thread::get_id()
   }
 
   std::string bin2Hex(const std::vector<uint8_t> &buff)
@@ -491,7 +491,7 @@ private:
       }
     }
 
-    LOG << "Write worker finised " << DURATION_MS(start).count() << "ms";
+    LOG << "Write worker finised " << DURATION_S(start).count() << "s";
   }
 
   void createThreads(thread_count_t threadCount)
@@ -558,14 +558,6 @@ int main(int argc, char *argv[])
     LOG << "Cant initizalize memory to hold file names";
     return 1;
   }
-#if 0
-  auto readWriteBuffer = allocBuffer(READ_BUFF_SIZE * 2);
-  if(!readWriteBuffer)
-  {
-    LOG << "Cant initialize memory for reading";
-    return 1;
-  }
-#endif
 
   std::FILE *outputFile = std::fopen(std::string{filename}.c_str(), "wb");
   if(!outputFile)
