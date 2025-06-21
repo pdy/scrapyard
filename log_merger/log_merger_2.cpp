@@ -486,8 +486,11 @@ private:
         uint8_t buffer[BUFSIZ];
 
         std::lock_guard lock(m_fileMutex);
+        const auto start = NOW();
         while(const size_t bytesRead = std::fread(buffer, 1, BUFSIZ, inFile))
           std::fwrite(buffer, 1, bytesRead, &m_outputFile);
+
+        LOG << "  File read/write " << DURATION_MS(start).count() << "ms";
       }
     }
 

@@ -26,7 +26,9 @@
 #include "simplelog/simplelog.hpp"
 #include "xxhash.hpp"
 
+#include <cmath>
 #include <cstdint>
+#include <cstdio>
 #include <functional>
 #include <new>
 #include <queue>
@@ -529,13 +531,72 @@ private:
 
       lock.unlock();
 
+
+      std::FILE *inFile = std::fopen(fileName.c_str(), "rb");
+      if(!inFile)
+      {
+        LOG << "  Can't open file " << fileName << " err " << std::ferror(inFile);
+        continue;
+      }
+
+      FileGuard inFileGuard{inFile};
+
+      const auto start = NOW();
+      uint8_t tmpBuf[BUFSIZ];
+      size_t bytesRead {0}, size{0};
+      while((bytesRead = std::fread(tmpBuf, 1, BUFSIZ, inFile)))
+      {
+        if(size + bytesRead > READ_BUFF_SIZE)
+        {
+          LOG << "  File too large to handle";
+          continue;
+        }
+
+        std::memcpy(buffer.get() + size, tmpBuf, bytesRead);
+        size += bytesRead;
+      }
+      LOG << "  File read in " << DURATION_MS(start).count() << "ms";
+
+      const auto [chunks, remainderToWrite] = [&]{
+        size_t chunks = static_cast<size_t> (std::floor(size / BUFSIZ));
+        while(chunks * BUFSIZ > size)
+          --chunks;
+
+        return std::make_tuple(chunks, size - chunks * BUFSIZ);
+      }();
+
+      {
+        std::lock_guard lock(m_fileMutex);
+
+        const auto start_2 = NOW();
+        size_t bytesWritten{0}, pos = 0;
+        for(size_t i = 0; i < chunks; ++i, pos = i * BUFSIZ)
+        {
+          bytesWritten += std::fwrite(buffer.get() + pos, 1, BUFSIZ, &m_outputFile);
+        }
+
+        if(remainderToWrite)
+          bytesWritten += std::fwrite(buffer.get() + pos, 1, BUFSIZ, &m_outputFile);
+
+        LOG << "  File wirte in " << DURATION_MS(start_2).count() << "ms";
+
+        if(bytesWritten != size)
+          LOG << "  Did not write correct amount of bytes";
+      }
+#if 0
       if(const auto bytesRead = read(fileName, buffer, READ_BUFF_SIZE))
       {
         // TODO: This part propably needs to be cut into BUFSIZ chunks
 
+        LOG << "  File read in " << DURATION_MS(start).count() << "ms";
+
         std::lock_guard lokc(m_fileMutex);
+        const auto start_2 = NOW();
         std::fwrite(buffer.get(), 1, *bytesRead, &m_outputFile);
+        LOG << "  File write in " << DURATION_MS(start_2).count() << "ms";
       }
+#endif
+
     }
 
     LOG << "Write worker finised " << DURATION_MS(start).count() << "ms";
