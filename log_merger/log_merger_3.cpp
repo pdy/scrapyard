@@ -576,9 +576,9 @@ private:
         }
 
         if(remainderToWrite)
-          bytesWritten += std::fwrite(buffer.get() + pos, 1, BUFSIZ, &m_outputFile);
+          bytesWritten += std::fwrite(buffer.get() + pos, 1, remainderToWrite, &m_outputFile);
 
-        LOG << "  File wirte in " << DURATION_MS(start_2).count() << "ms";
+        LOG << "  File write in " << DURATION_MS(start_2).count() << "ms";
 
         if(bytesWritten != size)
           LOG << "  Did not write correct amount of bytes";
