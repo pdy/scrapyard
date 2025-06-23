@@ -52,6 +52,11 @@ public:
         memcpy(m_str, str, m_size);
     }
   }
+/*
+  String(String &&other)
+  {
+  }
+*/
 
   ~String()
   {
@@ -66,18 +71,45 @@ public:
 
 int main()
 {
-  String str("Hello", "str");
+  //String str("Hello", "str");
+  
+  
 
-//  LOG << str.data();
+
+
+
+
+
+
+
+
+#if 0
+  LOG << "L-VALUE/R-VALUE check [str]";
+  log_lval_rval_resolution(str);
+  LOG << "L-VALUE/R-VALUE check [5]";
+  log_lval_rval_resolution(5);
+#endif
 
   return 0;
 }
+//#endif
 
+
+#if 0
+static String construct(const char *str)
+{
+  String ret(str, "ret");
+//  ret.
+
+  return ret;
+}
+#endif
+
+#if 0
 template<typename T>
 void log_lval_rval_resolution(T &&val)
 {
-//  LOG << "I'am rvalue: " << std::is_rvalue_reference_v<T>;
-  LOG << "I'am rvalue: " << std::is_same<T&&, decltype(val)>::value;
-  LOG << "I'am lvalue: " << std::is_lvalue_reference_v<T>;
+  LOG << "  I'am rvalue ref: " << std::is_rvalue_reference_v<decltype(val)>;
+  LOG << "  I'am lvalue ref: " << std::is_lvalue_reference_v<decltype(val)>;
 }
-//#endif
+#endif
