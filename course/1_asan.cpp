@@ -8,13 +8,14 @@ static void func(int **p)
 
 int main()
 {
-  
+#if 0 
   int var = 5;
   int *ref = &var;
+
   func(&ref);
 
   LOG << "ref " << *ref;
-
-  //  auto * ptr = new int;
+#endif
+    auto * ptr = new int;
   return 0;
 }

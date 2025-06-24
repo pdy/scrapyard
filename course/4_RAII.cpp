@@ -1,5 +1,19 @@
 #include "simplelog/simplelog.hpp"
+#include <memory>
 
+#if 0
+template<typename T, auto Deleter>
+struct GenericDeleter
+{
+  void operator()(T *rc) const
+  {
+    Deleter(rc);
+  }
+};
+
+template<typename T, auto Func>
+using legacy_ptr = std::unique_ptr<T, GenericDeleter<T, Func>>;
+#endif
 
 struct StackUnwind
 {

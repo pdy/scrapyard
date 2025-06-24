@@ -9,6 +9,8 @@ public:
     : m_x{x}, m_y{y}, m_z{z}
   {}
 
+  Point() = default;
+
   int sum_xy() const { return m_x + m_y; }
 };
 
@@ -16,6 +18,8 @@ int main()
 {
   Point p(5, 6, 7);
   LOG << "sum class " << p.sum_xy();
+
+  Point p2;
 
   return 0;
 }
