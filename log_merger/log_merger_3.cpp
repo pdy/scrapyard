@@ -157,12 +157,12 @@ struct FnamesMemory
 
 static FnamesMemory initFnamesMem(size_t count, size_t regionSize)
 {
-  char *data = new(std::nothrow) char[count * regionSize];
+  std::unique_ptr<char[]> data{ new(std::nothrow) char[count * regionSize] };
   if(!data)
     return FnamesMemory{};
 
   return FnamesMemory{
-    .memory{data},
+    .memory = std::move(data),
     .count = 0,
     .maxCount = count,
     .regionSize = regionSize
