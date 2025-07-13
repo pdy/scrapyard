@@ -1,18 +1,18 @@
 /*
 *  MIT License
-*  
+*
 *  Copyright (c) 2025 Pawel Drzycimski
-*  
+*
 *  Permission is hereby granted, free of charge, to any person obtaining a copy
 *  of this software and associated documentation files (the "Software"), to deal
 *  in the Software without restriction, including without limitation the rights
 *  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 *  copies of the Software, and to permit persons to whom the Software is
 *  furnished to do so, subject to the following conditions:
-*  
+*
 *  The above copyright notice and this permission notice shall be included in all
 *  copies or substantial portions of the Software.
-*  
+*
 *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -26,9 +26,7 @@
 #include "simplelog/simplelog.hpp"
 #include "xxhash.hpp"
 
-#include <cmath>
 #include <cstdint>
-#include <cstdio>
 #include <functional>
 #include <new>
 #include <queue>
@@ -157,12 +155,12 @@ struct FnamesMemory
 
 static FnamesMemory initFnamesMem(size_t count, size_t regionSize)
 {
-  std::unique_ptr<char[]> data{ new(std::nothrow) char[count * regionSize] };
+  char *data = new(std::nothrow) char[count * regionSize];
   if(!data)
     return FnamesMemory{};
 
   return FnamesMemory{
-    .memory = std::move(data),
+    .memory{data},
     .count = 0,
     .maxCount = count,
     .regionSize = regionSize
@@ -174,7 +172,6 @@ static uint8_t *allocBuffer(size_t size)
   return new(std::nothrow) uint8_t[size];
 }
 
-#if 0
 static std::optional<size_t> read(const std::string &fname, std::unique_ptr<uint8_t[]> &readBuffer, const size_t readBufferSize)
 {
   LOG << "Reading " << fname;
@@ -198,7 +195,6 @@ static std::optional<size_t> read(const std::string &fname, std::unique_ptr<uint
 
   return std::nullopt;
 }
-#endif
 
 static std::vector<uint8_t> hashFile(const std::string &path, const EVP_MD *evpMd)
 {
@@ -383,7 +379,7 @@ private:
     {
       std::unique_lock lock(m_filePathsMutex);
       m_pathAvailable.wait(lock, [this] { return !m_filePaths.empty() || !m_running || m_pathTraversalFinished; });
-      
+
       if(m_pathTraversalFinished && m_filePaths.empty())
         break;
 
@@ -447,7 +443,7 @@ class FileWriteThreadPool
   std::unique_ptr<uint8_t[]> m_buff_1;
   std::unique_ptr<uint8_t[]> m_buff_2;
   static constexpr size_t READ_BUFF_SIZE = 2 * GB + 10; // +10 just in case
-                                                      
+
   // state for input buffer
   FnamesMemory &m_fnamesArray;
   std::mutex &m_fnamesMutex;
@@ -533,72 +529,11 @@ private:
 
       lock.unlock();
 
-
-      std::FILE *inFile = std::fopen(fileName.c_str(), "rb");
-      if(!inFile)
-      {
-        LOG << "  Can't open file " << fileName << " err " << std::ferror(inFile);
-        continue;
-      }
-
-      FileGuard inFileGuard{inFile};
-
-      const auto start = NOW();
-      uint8_t tmpBuf[BUFSIZ];
-      size_t bytesRead {0}, size{0};
-      while((bytesRead = std::fread(tmpBuf, 1, BUFSIZ, inFile)))
-      {
-        if(size + bytesRead > READ_BUFF_SIZE)
-        {
-          LOG << "  File too large to handle";
-          continue;
-        }
-
-        std::memcpy(buffer.get() + size, tmpBuf, bytesRead);
-        size += bytesRead;
-      }
-      LOG << "  File read in " << DURATION_MS(start).count() << "ms";
-
-      const auto [chunks, remainderToWrite] = [&]{
-        size_t chunks = static_cast<size_t> (std::floor(size / BUFSIZ));
-        while(chunks * BUFSIZ > size)
-          --chunks;
-
-        return std::make_tuple(chunks, size - chunks * BUFSIZ);
-      }();
-
-      {
-        std::lock_guard lock(m_fileMutex);
-
-        const auto start_2 = NOW();
-        size_t bytesWritten{0}, pos = 0;
-        for(size_t i = 0; i < chunks; ++i, pos = i * BUFSIZ)
-        {
-          bytesWritten += std::fwrite(buffer.get() + pos, 1, BUFSIZ, &m_outputFile);
-        }
-
-        if(remainderToWrite)
-          bytesWritten += std::fwrite(buffer.get() + pos, 1, remainderToWrite, &m_outputFile);
-
-        LOG << "  File write in " << DURATION_MS(start_2).count() << "ms";
-
-        if(bytesWritten != size)
-          LOG << "  Did not write correct amount of bytes";
-      }
-#if 0
       if(const auto bytesRead = read(fileName, buffer, READ_BUFF_SIZE))
       {
-        // TODO: This part propably needs to be cut into BUFSIZ chunks
-
-        LOG << "  File read in " << DURATION_MS(start).count() << "ms";
-
         std::lock_guard lokc(m_fileMutex);
-        const auto start_2 = NOW();
         std::fwrite(buffer.get(), 1, *bytesRead, &m_outputFile);
-        LOG << "  File write in " << DURATION_MS(start_2).count() << "ms";
       }
-#endif
-
     }
 
     LOG << "Write worker finised " << DURATION_MS(start).count() << "ms";
@@ -609,17 +544,17 @@ private:
     m_threads = std::make_unique<std::jthread[]>(2);
     m_threadCount = 2;
     m_running = true;
-    
+
     m_threads[0] = std::jthread(
       [this, w = &FileWriteThreadPool::fileCopyWorker](std::unique_ptr<uint8_t[]> &buff)
         { std::invoke(w, this, buff); },
-      std::ref(m_buff_1)    
+      std::ref(m_buff_1)
     );
-    
+
     m_threads[1] = std::jthread(
       [this, w = &FileWriteThreadPool::fileCopyWorker](std::unique_ptr<uint8_t[]> &buff)
         { std::invoke(w, this, buff); },
-      std::ref(m_buff_2)    
+      std::ref(m_buff_2)
     );
   }
 
@@ -690,7 +625,7 @@ int main(int argc, char *argv[])
     LOG << "Couldn't open merged.log for writing";
     return 1;
   }
-  
+
   FileGuard writeFileGuard{outputFile};
 //  char wbuf[32 * KB];
 //  std::setvbuf(mergedLog, wbuf, _IOFBF, 32 * KB);
@@ -735,7 +670,7 @@ int main(int argc, char *argv[])
     hasher.schedule(path.string());
   }
 
-  finishedPathTraversal = true; 
+  finishedPathTraversal = true;
   LOG << "Finished path traversal";
 
   hasher.notify();
