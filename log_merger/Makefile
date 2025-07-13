@@ -3,7 +3,7 @@ print-%  : ; @echo $* = $($*)
 #CXX := clang++
 CXX := g++
 
-FLAGS := -std=c++20 -Wno-deprecated-register -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-padded -Wno-unsafe-buffer-usage
+FLAGS := -std=c++23 -Wno-deprecated-register -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-padded -Wno-unsafe-buffer-usage
 
 LD_FLAGS := #-L
 
@@ -37,6 +37,8 @@ main-build: pre-build
 #	@$(MAKE) --no-print-directory $(BUILD)/log_merger
 	@$(MAKE) --no-print-directory $(BUILD)/log_merger_2
 	@$(MAKE) --no-print-directory $(BUILD)/log_merger_3
+	@$(MAKE) --no-print-directory $(BUILD)/log_merger_4
+	@$(MAKE) --no-print-directory $(BUILD)/log_merger_5
 	
 clean:
 	@rm -r ./bin
