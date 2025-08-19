@@ -25,6 +25,7 @@
 
 #include <iostream>
 #include <memory>
+#include <array>
 #include <cstdint>
 #include <cassert>
 #include <cstring>
@@ -44,6 +45,12 @@ struct NonPackedType // compilier will add padding
     uint8_t byte{0};
     // three bytes of padding will be added here
     uint32_t u32{0};
+};
+
+struct WeirdlyAlignedType
+{
+  std::array<uint8_t, 6> arr;
+  uint8_t byte;
 };
 
 static void c_style_read_packed_type(uint8_t *buff, size_t buffSize)
@@ -114,7 +121,9 @@ struct AlignedHeap
     {
         memory = std::make_unique<uint8_t[]>(memory_size);
         std::memset(memory.get(), 0x00, memory_size);
-        aligned_ptr = (uint8_t*)((intptr_t)memory.get() + (type_align - 1) & ~intptr_t(type_align - 1));
+        //aligned_ptr = (uint8_t*)((intptr_t)memory.get() + (type_align - 1) & ~intptr_t(type_align - 1));
+        aligned_ptr = reinterpret_cast<uint8_t*>(
+            (reinterpret_cast<intptr_t>(memory.get()) + (type_align - 1)) & ~(type_align - 1));
     }
 
     template<typename ...Args>
@@ -151,6 +160,7 @@ int main()
 
     AlignedHeap<NonPackedType> memory;
     NonPackedType *nonPackedFromHeap = memory.create();
+//    std::cout << "mem address [" << (intptr_t)memory.memory.get() << "] align address [" << (intptr_t)memory.aligned_ptr << "]\n";
     c_style_read_non_packed_type(memory.aligned_ptr, NON_PACKED_TYPE_SIZE);
 
     PackedType packedType{
