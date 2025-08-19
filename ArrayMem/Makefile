@@ -3,7 +3,13 @@ print-%  : ; @echo $* = $($*)
 #CXX := clang++
 CXX := g++
 
-FLAGS := -std=c++20 -Wno-deprecated-register -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-padded
+FLAGS := -std=c++20 \
+				 -Wno-deprecated-register \
+				 -Wno-c++98-compat \
+				 -Wno-c++98-compat-pedantic \
+				 -Wno-padded \
+				 -Wno-old-style-cast \
+				 -Wno-unsage-buffer-usage
 
 LD_FLAGS := #-L
 
@@ -34,6 +40,7 @@ post-build: main-build
 
 main-build: pre-build
 	@$(MAKE) --no-print-directory $(BUILD)/ArrayMem
+	@$(MAKE) --no-print-directory $(BUILD)/BinToStructParse
 	
 clean:
 	@rm -r ./bin

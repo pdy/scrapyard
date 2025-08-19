@@ -115,7 +115,7 @@ int main()
 //  char *aligned = (char*)((intptr_t)buf + (alignment - 1) & ~intptr_t(alignment - 1));
   uint8_t *ptr = (uint8_t*)((intptr_t)someTypeBuffer + (ALIGN - 1) & ~intptr_t(ALIGN - 1));
 
-  LOG << "someTypeBuffer pow2 [" << isPowerofTwo((uintptr_t)someTypeBuffer) << "] ptr pow2 [" << isPowerofTwo((uintptr_t)ptr) << ']';
+//  LOG << "someTypeBuffer pow2 [" << isPowerofTwo((uintptr_t)someTypeBuffer) << "] ptr pow2 [" << isPowerofTwo((uintptr_t)ptr) << ']';
   LOG << "someTypeBuffer div" << ALIGN << " [" << isDivisibleBy((uintptr_t)someTypeBuffer, ALIGN) << "] ptr div" << ALIGN  << " [" << isDivisibleBy((uintptr_t)ptr, ALIGN) << ']';
 
   //uint8_t *someTypeBuffer = new uint8_t(SOME_TYPE_SIZE);
@@ -123,6 +123,7 @@ int main()
 
   LOG 
     << "buff size: " << std::size(someTypeBuffer) 
+    << " SomeType size: " << sizeof(SomeType)
     << " start address: [" << someTypeBuffer 
     << "] align address: [" << ptr 
     << "] end address [" << (someTypeBuffer + std::size(someTypeBuffer)) 
