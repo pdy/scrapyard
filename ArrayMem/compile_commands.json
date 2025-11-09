@@ -1,0 +1,48 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/g++",
+      "-c",
+      "-std=c++20",
+      "-Wno-deprecated-register",
+      "-Wno-c++98-compat",
+      "-Wno-c++98-compat-pedantic",
+      "-Wno-padded",
+      "-Wno-old-style-cast",
+      "-Wno-unsage-buffer-usage",
+      "-isystemcmdline",
+      "-O3",
+      "-Wall",
+      "-pthread",
+      "-o",
+      "bin/release/ArrayMem",
+      "ArrayMem.cpp"
+    ],
+    "directory": "/home/pdrzycim/repo/pdy/scrapyard/ArrayMem",
+    "file": "/home/pdrzycim/repo/pdy/scrapyard/ArrayMem/ArrayMem.cpp",
+    "output": "/home/pdrzycim/repo/pdy/scrapyard/ArrayMem/bin/release/ArrayMem"
+  },
+  {
+    "arguments": [
+      "/usr/bin/g++",
+      "-c",
+      "-std=c++20",
+      "-Wno-deprecated-register",
+      "-Wno-c++98-compat",
+      "-Wno-c++98-compat-pedantic",
+      "-Wno-padded",
+      "-Wno-old-style-cast",
+      "-Wno-unsage-buffer-usage",
+      "-isystemcmdline",
+      "-O3",
+      "-Wall",
+      "-pthread",
+      "-o",
+      "bin/release/BinToStructParse",
+      "BinToStructParse.cpp"
+    ],
+    "directory": "/home/pdrzycim/repo/pdy/scrapyard/ArrayMem",
+    "file": "/home/pdrzycim/repo/pdy/scrapyard/ArrayMem/BinToStructParse.cpp",
+    "output": "/home/pdrzycim/repo/pdy/scrapyard/ArrayMem/bin/release/BinToStructParse"
+  }
+]

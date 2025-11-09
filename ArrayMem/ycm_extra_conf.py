@@ -13,6 +13,7 @@ flags = [
     '-Wno-c++98-compat-pedantic',
     '-Wno-padded',
     '-Wno-old-style-cast',
+    '-Wno-unsafe-buffer-usage',
     '-std=c++20',
     '-stdlib=libstdc++',
     '-x','c++',

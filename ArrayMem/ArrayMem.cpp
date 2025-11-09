@@ -72,7 +72,7 @@ inline void printArray(T (&arr)[SIZE])
   std::cout << ']';
 }
 
-inline bool isPowerofTwo(uintptr_t n)
+inline bool isPowerofTwo(size_t n)
 {
   return (n & (n - 1)) == 0;
 #if 0
@@ -110,12 +110,15 @@ int main()
 
 
   static constexpr size_t ALIGN = alignof(SomeType);
+  LOG << "ALIGN power of two: " << isPowerofTwo(ALIGN);
   static constexpr size_t SOME_TYPE_SIZE = sizeof(SomeType);
   /*alignas(SomeType)*/ uint8_t someTypeBuffer[SOME_TYPE_SIZE + ALIGN - 1] = {0};
 //  char *aligned = (char*)((intptr_t)buf + (alignment - 1) & ~intptr_t(alignment - 1));
-  uint8_t *ptr = (uint8_t*)((intptr_t)someTypeBuffer + (ALIGN - 1) & ~intptr_t(ALIGN - 1));
+  //uint8_t *ptr = (uint8_t*)((intptr_t)someTypeBuffer + (ALIGN - 1) & ~intptr_t(ALIGN - 1));
+  uint8_t *ptr = reinterpret_cast<uint8_t*>(
+      (reinterpret_cast<intptr_t>(someTypeBuffer) + (ALIGN - 1)) & ~(ALIGN - 1));
 
-  LOG << "someTypeBuffer pow2 [" << isPowerofTwo((uintptr_t)someTypeBuffer) << "] ptr pow2 [" << isPowerofTwo((uintptr_t)ptr) << ']';
+//  LOG << "someTypeBuffer pow2 [" << isPowerofTwo((uintptr_t)someTypeBuffer) << "] ptr pow2 [" << isPowerofTwo((uintptr_t)ptr) << ']';
   LOG << "someTypeBuffer div" << ALIGN << " [" << isDivisibleBy((uintptr_t)someTypeBuffer, ALIGN) << "] ptr div" << ALIGN  << " [" << isDivisibleBy((uintptr_t)ptr, ALIGN) << ']';
 
   //uint8_t *someTypeBuffer = new uint8_t(SOME_TYPE_SIZE);
@@ -123,6 +126,7 @@ int main()
 
   LOG 
     << "buff size: " << std::size(someTypeBuffer) 
+    << " SomeType size: " << sizeof(SomeType)
     << " start address: [" << someTypeBuffer 
     << "] align address: [" << ptr 
     << "] end address [" << (someTypeBuffer + std::size(someTypeBuffer)) 

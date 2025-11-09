@@ -14,6 +14,7 @@ flags = [
     '-Wno-padded',
     '-Wno-unused-variables',
     '-Wno-unused-function',
+    '-Wno-unused-includes',
     '-std=c++20',
     '-stdlib=libstdc++',
     '-x','c++',
