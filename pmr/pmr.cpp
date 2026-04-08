@@ -27,8 +27,10 @@
 #include "simplelog/simplelog.hpp"
 
 #include <cstdlib>
+#include <iterator>
 #include <memory_resource>
 #include <new>
+#include <format>
 
 #define KB (1024)
 #define MB (KB * 1024)
@@ -37,7 +39,7 @@
 static size_t g_allocMemoryCount = 0, g_allocateCount = 0;
 
 
-class NonThrowMemoryUpstream : public std::pmr::memory_resource
+class CustomMemoryUpstream : public std::pmr::memory_resource
 {
   using Base = std::pmr::memory_resource;
 
@@ -50,7 +52,7 @@ public:
 protected:
   void* do_allocate(std::size_t bytes, std::size_t align) override
   {
-    void *ptr = nullptr;//std::aligned_alloc(align, bytes);
+    void *ptr = std::aligned_alloc(align, bytes);
     if(!ptr)
       throw std::bad_alloc();
 
@@ -66,7 +68,7 @@ protected:
   bool do_is_equal(const std::pmr::memory_resource &other) const noexcept override 
   {
     std::cout << "do_is_equal\n";
-    return dynamic_cast<const NonThrowMemoryUpstream*>(&other) != nullptr;
+    return dynamic_cast<const CustomMemoryUpstream*>(&other) != nullptr;
   }
 };
 
@@ -91,7 +93,7 @@ protected:
 
 static void run()
 {
-  NonThrowMemoryUpstream additionalMemory;
+  CustomMemoryUpstream additionalMemory;
   AllocStat arena(1 * MB, &additionalMemory);
 
   //std::pmr::monotonic_buffer_resource arena(1 * KB, &additionalMemory);
@@ -102,8 +104,8 @@ static void run()
 
   
   std::pmr::string str2(&arena);
-  str2 = str;
-
+  str2.reserve(str.size());
+  std::format_to(std::back_inserter(str2), "{}", str);
   
   //std::cout << '[' << str.size() << "] " << str << '\n';
 
