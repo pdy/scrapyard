@@ -38,7 +38,6 @@
 
 static size_t g_allocMemoryCount = 0, g_allocateCount = 0;
 
-
 class CustomMemoryUpstream : public std::pmr::memory_resource
 {
   using Base = std::pmr::memory_resource;
