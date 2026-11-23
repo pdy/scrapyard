@@ -363,9 +363,7 @@ int main()
 
   const auto ctx_guard = MakeContextGuard(crypt_provider_ctx);
 
-  out_file << "std::array array {{\n";
-
-  const auto start = NOW();
+  out_file << "std::array array {\n";
 
   size_t total_folder_count = 1, total_file_count = 0, total_files_errors = 0;
   std::queue<std::wstring> dirs;
@@ -434,10 +432,10 @@ int main()
     } while(FindNextFileW(find, &find_file_data));
   }
 
-  out_file << "}};";
+  out_file << "};";
   out_file.close();
 
-  std::println("\nSearched {} folders. Hashed {}/{} files. Total time {}s", total_folder_count, total_file_count - total_files_errors, total_file_count, DURATION_S(start).count());
+  std::println("\nSearched {} folders. Hashed {}/{} files.", total_folder_count, total_file_count - total_files_errors, total_file_count);
 
   return ERROR_SUCCESS;
 }
