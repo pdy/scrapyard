@@ -409,12 +409,12 @@ int main()
 
         const auto fp = std::format(L"{}\\{}", curr_dir, dir_name);
         // std::wcout << "\tRead file \"" << fp << "\"\n";
-        const auto file_content = ReadEntireFile(fp.c_str(), filesize.QuadPart);
-        if(!file_content) {
-          ++total_files_errors;
-          std::wcout << "\t\t" << file_content.error() << L'\n';
-          continue;
-        }
+        //const auto file_content = ReadEntireFile(fp.c_str(), filesize.QuadPart);
+        //if(!file_content) {
+        //  ++total_files_errors;
+        //  std::wcout << "\t\t" << file_content.error() << L'\n';
+        //  continue;
+        //}
 
         const auto hash_bytes = HashFileSHA256(crypt_provider_ctx, fp.c_str());
         if(!hash_bytes) {
